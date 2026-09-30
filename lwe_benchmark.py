@@ -10,8 +10,12 @@ Robust resumable design:
     fixing a known pulp.HiGHS status bug on small MIPs.
   - Per-secret-type time limits: uniform secrets (known-hard) get a
     shorter budget than ternary/sparse.
-  - LLL/BKZ verification compares mod q, so signed ternary/sparse
-    secrets match their canonical [0, q-1] representatives.
+  - LLL/BKZ verification handles the sign ambiguity in the target
+    vector: the reduced basis may contain either (e, s, -1) or
+    (-e, -s, 1), both equally short, so we test both sign
+    conventions across all rows.
+  - Mod-q comparison of secrets (needed for ternary/sparse whose
+    signed representatives live in {-1, 0, 1}).
   - Aggregates all checkpoints into results/benchmark_results.json
     at the end of each run.
 """
@@ -134,10 +138,10 @@ def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs',
     Solve Search-LWE with MILP.
 
     Solver selection:
-      highs + CLI path       → HiGHS_CMD
-      highs + Python API     → pulp.HiGHS
-      highs + neither        → CBC fallback
-      cbc                    → CBC
+      highs + CLI path       -> HiGHS_CMD
+      highs + Python API     -> pulp.HiGHS
+      highs + neither        -> CBC fallback
+      cbc                    -> CBC
     """
     m, n = A.shape
     ERROR_BOUND = 20  # tight bound; true errors are ~N(0,1)
@@ -208,10 +212,19 @@ def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs',
 # LATTICE REDUCTION ATTACK
 # ============================================================
 def solve_lwe_lattice(A, b, q, method='LLL', beta=20, time_limit=60):
-    """Primal attack (uSVP) with LLL or BKZ via fpylll."""
+    """
+    Primal attack (uSVP) with LLL or BKZ via fpylll.
+
+    Handles two ambiguities:
+      1. Sign flip: the reduced basis may contain either (e, s, -1)
+         or (-e, -s, 1); both are equally short. We test both.
+      2. Row position: the target vector may appear at any row of
+         the reduced basis, not just row 0. We scan all rows.
+    """
     m, n = A.shape
     d = m + n + 1
 
+    # --- q-ary lattice basis with Kannan embedding ---
     B = IntegerMatrix(d, d)
     for i in range(m):
         B[i, i] = q
@@ -223,6 +236,7 @@ def solve_lwe_lattice(A, b, q, method='LLL', beta=20, time_limit=60):
         B[d - 1, j] = int(b[j])
     B[d - 1, d - 1] = 1
 
+    # --- Lattice reduction ---
     start = time.time()
     try:
         if method == 'LLL':
@@ -234,15 +248,27 @@ def solve_lwe_lattice(A, b, q, method='LLL', beta=20, time_limit=60):
         print(f"    [{method} ERROR] {e}")
         return None, time.time() - start, 'ERROR'
 
-    # Look for the short target vector among the first few basis rows.
-    # The recovered candidate is mapped into [0, q-1] via mod q, so
-    # verification later must compare mod q as well.
-    for i in range(min(5, d)):
-        v = [B[i, j] for j in range(d)]
-        s_cand = np.array(v[m:m + n], dtype=int) % q
-        residual = (A @ s_cand - b) % q
-        if np.all(np.minimum(residual, q - residual) <= 5):
-            return s_cand, elapsed, 'SUCCESS'
+    # --- Search all rows for the target, trying both signs ---
+    # The target vector has squared norm ||e||^2 + ||s||^2 + 1.
+    # For ternary/sparse s with sigma=1 errors, this is <= ~100.
+    # Use a generous 500 threshold to avoid missing valid targets
+    # while skipping obviously-wrong rows.
+    for i in range(d):
+        row = [int(B[i, j]) for j in range(d)]
+        norm_sq = sum(x * x for x in row)
+        if norm_sq > 500:
+            continue
+
+        x_raw = np.array(row[m:m + n], dtype=int)
+
+        # Try both +x and -x; LLL/BKZ may return either sign
+        for x_try in (x_raw, -x_raw):
+            s_cand = x_try % q
+            residual = (A @ s_cand - b) % q
+            # Error residual should be small (<= 5 is generous
+            # since errors are clipped to [-5, 5])
+            if np.all(np.minimum(residual, q - residual) <= 5):
+                return s_cand, elapsed, 'SUCCESS'
 
     return None, time.time() - start, 'FAIL'
 
@@ -267,8 +293,8 @@ def secrets_match(candidate, truth, q):
     LLL/BKZ return values in [0, q-1] (after % q), while ternary
     and sparse secrets use signed representatives in {-1, 0, 1}.
     Comparing mod q puts both sides in a common domain:
-        -1 mod 97 == 96 mod 97  → True
-        0  mod 97 == 0  mod 97  → True
+        -1 mod 97 == 96 mod 97  -> True
+        0  mod 97 == 0  mod 97  -> True
     """
     if candidate is None:
         return False

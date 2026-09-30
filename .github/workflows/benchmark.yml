@@ -79,11 +79,11 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: results/checkpoints
-          key: lwe-checkpoints-schema4-${{ github.ref_name }}-${{ github.run_id }}
+          key: lwe-checkpoints-schema5-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
-            lwe-checkpoints-schema4-${{ github.ref_name }}-
-            lwe-checkpoints-schema4-${{ github.ref_name }}-
-            lwe-checkpoints-schema4-
+            lwe-checkpoints-schema5-${{ github.ref_name }}-
+            lwe-checkpoints-schema5-${{ github.ref_name }}-
+            lwe-checkpoints-schema5-
 
       # ============================================================
       # RUN BENCHMARK (continue even if some instances fail)
@@ -112,7 +112,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: results/checkpoints
-          key: lwe-checkpoints-schema4-${{ github.ref_name }}-${{ github.run_id }}
+          key: lwe-checkpoints-schema5-${{ github.ref_name }}-${{ github.run_id }}
 
       # ============================================================
       # ARTIFACT BACKUP (survives cache eviction, 90-day retention)
