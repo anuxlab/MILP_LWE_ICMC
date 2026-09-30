@@ -467,7 +467,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='LWE Benchmark: MILP (HiGHS/CBC) vs. LLL/BKZ (resumable)'
     )
-    parser.add_argument('--dimensions', type=int, nargs='+', default=[5, 10, 15])
+    parser.add_argument('--dimensions', type=int, nargs='+', default=[5, 10, 15, 20, 25, 30, 35, 40, 45 ,50])
     parser.add_argument('--secret-types', nargs='+',
                         default=['ternary', 'sparse', 'uniform'])
     parser.add_argument('--instances', type=int, default=10)
