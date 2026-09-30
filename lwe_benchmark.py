@@ -10,6 +10,8 @@ Robust resumable design:
     fixing a known pulp.HiGHS status bug on small MIPs.
   - Per-secret-type time limits: uniform secrets (known-hard) get a
     shorter budget than ternary/sparse.
+  - LLL/BKZ verification compares mod q, so signed ternary/sparse
+    secrets match their canonical [0, q-1] representatives.
   - Aggregates all checkpoints into results/benchmark_results.json
     at the end of each run.
 """
@@ -232,6 +234,9 @@ def solve_lwe_lattice(A, b, q, method='LLL', beta=20, time_limit=60):
         print(f"    [{method} ERROR] {e}")
         return None, time.time() - start, 'ERROR'
 
+    # Look for the short target vector among the first few basis rows.
+    # The recovered candidate is mapped into [0, q-1] via mod q, so
+    # verification later must compare mod q as well.
     for i in range(min(5, d)):
         v = [B[i, j] for j in range(d)]
         s_cand = np.array(v[m:m + n], dtype=int) % q
@@ -250,6 +255,24 @@ def get_time_limit(sec_type, base_limit):
     if sec_type == 'uniform':
         return min(base_limit, 10)
     return base_limit
+
+
+# ============================================================
+# MOD-Q SECRET COMPARISON
+# ============================================================
+def secrets_match(candidate, truth, q):
+    """
+    Compare a candidate secret against ground truth, modulo q.
+
+    LLL/BKZ return values in [0, q-1] (after % q), while ternary
+    and sparse secrets use signed representatives in {-1, 0, 1}.
+    Comparing mod q puts both sides in a common domain:
+        -1 mod 97 == 96 mod 97  → True
+        0  mod 97 == 0  mod 97  → True
+    """
+    if candidate is None:
+        return False
+    return np.array_equal(np.asarray(candidate) % q, np.asarray(truth) % q)
 
 
 # ============================================================
@@ -298,7 +321,9 @@ def run_benchmark(args):
                         solved += 1
                     print(f"  [{done:>3}/{total}] {key}: RESUMED "
                           f"(HiGHS={'OK' if cached.get('highs_success') else 'X'}, "
-                          f"CBC={'OK' if cached.get('cbc_success') else 'X'})")
+                          f"CBC={'OK' if cached.get('cbc_success') else 'X'}, "
+                          f"LLL={'OK' if cached.get('lll_success') else 'X'}, "
+                          f"BKZ={'OK' if cached.get('bkz_success') else 'X'})")
                     sys.stdout.flush()
                     continue
 
@@ -308,28 +333,32 @@ def run_benchmark(args):
                     n, args.q, m, sec_type, seed=seed
                 )
 
+                # --- HiGHS ---
                 t0 = time.time()
                 s_h, _, st_h = solve_lwe_milp(A, b, args.q, sec_type, 'highs',
                                                time_limit=tl, highs_path=highs_path)
                 t_h = time.time() - t0
-                ok_h = (s_h is not None) and np.array_equal(s_h, s_true)
+                ok_h = secrets_match(s_h, s_true, args.q)
 
+                # --- CBC ---
                 t0 = time.time()
                 s_c, _, st_c = solve_lwe_milp(A, b, args.q, sec_type, 'cbc',
                                                time_limit=tl)
                 t_c = time.time() - t0
-                ok_c = (s_c is not None) and np.array_equal(s_c, s_true)
+                ok_c = secrets_match(s_c, s_true, args.q)
 
+                # --- LLL ---
                 t0 = time.time()
                 s_l, _, _ = solve_lwe_lattice(A, b, args.q, 'LLL', time_limit=tl)
                 t_l = time.time() - t0
-                ok_l = (s_l is not None) and np.array_equal(np.asarray(s_l) % args.q, np.asarray(s_true) % args.q)
+                ok_l = secrets_match(s_l, s_true, args.q)
 
+                # --- BKZ ---
                 t0 = time.time()
                 s_b, _, _ = solve_lwe_lattice(A, b, args.q, 'BKZ',
                                                beta=args.bkz_beta, time_limit=tl)
                 t_b = time.time() - t0
-                ok_b = (s_b is not None) and np.array_equal(np.asarray(s_b) % args.q, np.asarray(s_true) % args.q)
+                ok_b = secrets_match(s_b, s_true, args.q)
 
                 verified = ok_h or ok_c or ok_l or ok_b
                 if verified:
