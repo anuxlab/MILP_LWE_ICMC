@@ -1,11 +1,45 @@
+#!/usr/bin/env python3
+"""Quick sanity test for both HiGHS and CBC solvers + LLL."""
+
 import numpy as np
 import time
-from pulp import LpProblem, LpVariable, LpInteger, lpSum, LpMinimize, PULP_CBC_CMD, value
+from pulp import (
+    LpProblem, LpVariable, LpInteger, lpSum, LpMinimize,
+    PULP_CBC_CMD, HiGHS_CMD, value,
+)
 from fpylll import IntegerMatrix, LLL
 
-print("=" * 50)
-print("Quick Sanity Test (with tight bounds)")
-print("=" * 50)
+
+def build_and_solve(A, b, q, solver_name, time_limit=30):
+    m, n = A.shape
+    ERROR_BOUND = 20
+
+    prob = LpProblem(f"LWE_{solver_name}", LpMinimize)
+    s_vars = [LpVariable(f"s_{j}", lowBound=-1, upBound=1, cat=LpInteger) for j in range(n)]
+    k_vars = [LpVariable(f"k_{i}", lowBound=-100, upBound=100, cat=LpInteger) for i in range(m)]
+    e_plus = [LpVariable(f"ep_{i}", lowBound=0, upBound=ERROR_BOUND, cat=LpInteger) for i in range(m)]
+    e_minus = [LpVariable(f"em_{i}", lowBound=0, upBound=ERROR_BOUND, cat=LpInteger) for i in range(m)]
+
+    for i in range(m):
+        prob += lpSum(A[i, j] * s_vars[j] for j in range(n)) + e_plus[i] - e_minus[i] - q * k_vars[i] == b[i]
+    prob += lpSum(e_plus[i] + e_minus[i] for i in range(m))
+
+    start = time.time()
+    if solver_name == 'highs':
+        prob.solve(HiGHS_CMD(msg=False, timeLimit=time_limit))
+    else:
+        prob.solve(PULP_CBC_CMD(msg=False, timeLimit=time_limit, threads=2))
+    elapsed = time.time() - start
+
+    if prob.status == 1:
+        s_rec = np.array([value(s_vars[j]) for j in range(n)], dtype=int)
+        return s_rec, elapsed, 'SUCCESS'
+    return None, elapsed, f'FAIL(status={prob.status})'
+
+
+print("=" * 60)
+print("Quick Sanity Test — HiGHS + CBC + LLL")
+print("=" * 60)
 
 n, q, m = 5, 97, 10
 np.random.seed(42)
@@ -17,36 +51,15 @@ b = (A @ s_true + e_true) % q
 
 print(f"True secret: {s_true}")
 
-# ============================================================
-# MILP with TIGHT bounds and a HARD time limit
-# ============================================================
-print("\n[1] Testing MILP with CBC (tight bounds)...")
-ERROR_BOUND = 20  # errors are tiny (sigma=1); 20 is generous
+print("\n[1] MILP — HiGHS solver")
+s_h, t_h, st_h = build_and_solve(A, b, q, 'highs')
+print(f"    Status: {st_h}, Time: {t_h:.3f}s, Match: {np.array_equal(s_h, s_true) if s_h is not None else False}")
 
-prob = LpProblem("LWE", LpMinimize)
-s_vars = [LpVariable(f"s_{j}", lowBound=-1, upBound=1, cat=LpInteger) for j in range(n)]
-k_vars = [LpVariable(f"k_{i}", lowBound=-100, upBound=100, cat=LpInteger) for i in range(m)]
-e_plus = [LpVariable(f"ep_{i}", lowBound=0, upBound=ERROR_BOUND, cat=LpInteger) for i in range(m)]
-e_minus = [LpVariable(f"em_{i}", lowBound=0, upBound=ERROR_BOUND, cat=LpInteger) for i in range(m)]
+print("\n[2] MILP — CBC solver")
+s_c, t_c, st_c = build_and_solve(A, b, q, 'cbc')
+print(f"    Status: {st_c}, Time: {t_c:.3f}s, Match: {np.array_equal(s_c, s_true) if s_c is not None else False}")
 
-for i in range(m):
-    prob += lpSum(A[i, j] * s_vars[j] for j in range(n)) + e_plus[i] - e_minus[i] - q * k_vars[i] == b[i]
-prob += lpSum(e_plus[i] + e_minus[i] for i in range(m))
-
-start = time.time()
-prob.solve(PULP_CBC_CMD(msg=True, timeLimit=30, threads=2))
-elapsed = time.time() - start
-
-if prob.status == 1:
-    s_milp = np.array([value(s_vars[j]) for j in range(n)], dtype=int)
-    print(f"MILP match: {np.array_equal(s_milp, s_true)}  (took {elapsed:.2f}s)")
-else:
-    print(f"MILP status: {prob.status}  (took {elapsed:.2f}s)")
-
-# ============================================================
-# LLL
-# ============================================================
-print("\n[2] Testing LLL with fpylll...")
+print("\n[3] LLL attack")
 d = m + n + 1
 B = IntegerMatrix(d, d)
 for i in range(m):
@@ -58,11 +71,10 @@ for i in range(n):
 for j in range(m):
     B[d - 1, j] = int(b[j])
 B[d - 1, d - 1] = 1
-
 start = time.time()
 LLL.reduction(B)
-print(f"LLL reduced {d}-dim basis in {time.time() - start:.3f}s")
+print(f"    LLL reduced {d}-dim basis in {time.time() - start:.4f}s")
 
-print("\n" + "=" * 50)
-print("Environment OK!")
-print("=" * 50)
+print("\n" + "=" * 60)
+print("All solvers OK — ready for full benchmark!")
+print("=" * 60)

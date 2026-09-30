@@ -1,69 +1,53 @@
-# MILP_LWE_ICMC
-Just another simulation for LWE
+# MILP vs. Lattice Reduction for LWE — Dual-Solver Benchmark
 
-# MILP vs. Lattice Reduction for LWE — Benchmark
+Open-source benchmark comparing **MILP (HiGHS + CBC)** vs. **lattice reduction (LLL/BKZ)** for the Search-LWE problem. Runs on GitHub Actions.
 
-Automated benchmark comparing MILP-based attacks (CBC solver) with lattice reduction (LLL/BKZ) for small LWE instances, running on GitHub Actions.
+## Outputs
 
-## Setup
+Each run produces (in `results/`):
+- `benchmark_results.json` — raw data (all runs)
+- `fig_success_rate.pdf` / `.png` — success rate vs. dimension
+- `fig_time_to_solution.pdf` / `.png` — timing (log scale)
+- `fig_solver_comparison.pdf` / `.png` — HiGHS vs. CBC
+- `fig_success_by_secret.pdf` / `.png` — per secret type
+- `tables.tex` — LaTeX tables ready to paste into the paper
 
-### 1. Create GitHub repository
+## Run
 
-```bash
-cd ~/Desktop/IIITG/Thesis/MILP_LWE_ICMC
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/MILP_LWE_ICMC.git
-git push -u origin main
-```
+### Manual trigger (recommended)
+Actions tab → **LWE Benchmark** → Run workflow.
 
-### 2. Trigger the workflow
-
-**Option A — Auto on push:** The workflow runs automatically after every push to `main`.
-
-**Option B — Manual:** Go to `Actions` tab → `LWE Benchmark` → `Run workflow` → set parameters → `Run`.
-
-### 3. Download results
-
-Once the workflow finishes (~10–30 min), go to the run page → `Artifacts` → download `benchmark-results.zip`.
-
-It contains:
-- `benchmark_results.json` — raw data
-- `success_rate.pdf` / `.png` — Figure 1
-- `time_to_solution.pdf` / `.png` — Figure 2
-
-## Parameters
-
-Edit `.github/workflows/benchmark.yml` or pass via the "Run workflow" dialog:
-
+### CLI parameters
 | Param | Default | Meaning |
 |-------|---------|---------|
-| `dimensions` | `5 10 15 20 25` | LWE dimensions to test |
+| `dimensions` | `5 10 15 20` | Dimensions to test |
 | `instances` | `10` | Instances per (n, secret) config |
-| `time_limit` | `120` | Max seconds per attack |
+| `time_limit` | `60` | Max seconds per attack |
 | `bkz_beta` | `15` | BKZ block size |
 
-## Local Run (Optional)
+## Local reproduction
 
 ```bash
 python3.11 -m venv lwe-bench-env
 source lwe-bench-env/bin/activate
 pip install -r requirements.txt
 python quick_test.py
-python lwe_benchmark.py --dimensions 5 10 --instances 2
+python lwe_benchmark.py --dimensions 5 10 15 --instances 3 --time-limit 30
 python generate_figures.py
+python generate_latex_tables.py
 ```
 
-## Results Interpretation
+## Solvers
 
-- **MILP wins** for sparse secrets → structural constraints prune search space
-- **BKZ wins** for dense secrets at larger `n` → geometric structure dominates
-- **Crossover dimension** ≈ 20 for ternary, ≈ 15 for sparse
+| Solver | License | Notes |
+|--------|---------|-------|
+| **HiGHS** | MIT / open-source | Fast MILP solver, best-in-class open-source |
+| **CBC** | EPL | Classic reference solver, comes bundled with PuLP |
+| **LLL** | LGPL | fpylll |
+| **BKZ** | LGPL | fpylll |
 
-## Cost
+All solvers are 100% open-source and academic-friendly.
 
-Free for public repos (unlimited minutes). Private repos: 2000 min/month free tier.
+## Expected runtime (GitHub Actions)
 
-Each run consumes ~15–30 min, so you can do ~60+ runs/month for free even on private.
+~25–35 minutes for `5 10 15 20` × 3 secrets × 10 instances.

@@ -3,5 +3,6 @@ scipy>=1.11
 matplotlib>=3.8
 sympy>=1.12
 pulp>=2.8
+highspy>=1.7
 cysignals>=1.11
 fpylll>=0.6.1
