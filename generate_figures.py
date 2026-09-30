@@ -3,6 +3,7 @@
 
 import json
 import os
+import sys
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -21,8 +22,16 @@ RESULTS_FILE = 'results/benchmark_results.json'
 OUT_DIR = 'results'
 os.makedirs(OUT_DIR, exist_ok=True)
 
+if not os.path.exists(RESULTS_FILE):
+    print(f"[WARN] {RESULTS_FILE} not found; skipping figures.")
+    sys.exit(0)
+
 with open(RESULTS_FILE) as f:
     results = json.load(f)
+
+if not results:
+    print("[WARN] No results in benchmark_results.json; skipping figures.")
+    sys.exit(0)
 
 dims = sorted(set(r['n'] for r in results))
 sec_types = sorted(set(r['secret_type'] for r in results))
@@ -36,26 +45,22 @@ methods = [
 
 
 def success_rate(records, key):
-    if not records:
-        return 0
-    return sum(r[key] for r in records) / len(records) * 100
+    return sum(r[key] for r in records) / len(records) * 100 if records else 0.0
 
 
 def mean_time(records, key):
-    if not records:
-        return 0
-    return float(np.mean([r[key] for r in records]))
+    return float(np.mean([r[key] for r in records])) if records else 0.0
 
 
 # ============================================================
-# FIGURE 1: Success Rate — 1 panel per secret type
+# FIGURE 1: Success rate, one panel per secret type
 # ============================================================
 fig, axes = plt.subplots(1, len(sec_types), figsize=(4.5 * len(sec_types), 4), sharey=True)
 if len(sec_types) == 1:
     axes = [axes]
 
 for ax, sec in zip(axes, sec_types):
-    for succ_key, time_key, label, color, marker, ls in methods:
+    for succ_key, _, label, color, marker, ls in methods:
         rates = []
         for n in dims:
             sub = [r for r in results if r['n'] == n and r['secret_type'] == sec]
@@ -78,7 +83,7 @@ print(f"Saved: {OUT_DIR}/fig_success_rate.pdf")
 
 
 # ============================================================
-# FIGURE 2: Time-to-Solution (log scale), one line per method+secret
+# FIGURE 2: Time-to-solution (log scale)
 # ============================================================
 fig, ax = plt.subplots(figsize=(8, 5))
 colors = {'highs': '#1f77b4', 'cbc': '#ff7f0e', 'lll': '#d62728', 'bkz': '#2ca02c'}
@@ -110,7 +115,7 @@ print(f"Saved: {OUT_DIR}/fig_time_to_solution.pdf")
 
 
 # ============================================================
-# FIGURE 3: Solver Comparison — HiGHS vs CBC (bar chart)
+# FIGURE 3: HiGHS vs CBC bar chart
 # ============================================================
 fig, ax = plt.subplots(figsize=(8, 4.5))
 x = np.arange(len(dims))
@@ -128,12 +133,11 @@ ax.set_xticklabels(dims)
 ax.legend()
 ax.grid(True, alpha=0.3, axis='y')
 
-# Annotate speedup factor
 for i, n in enumerate(dims):
-    if cbc_times[i] > 0:
-        speedup = cbc_times[i] / highs_times[i] if highs_times[i] > 0 else 0
+    if cbc_times[i] > 0 and highs_times[i] > 0:
+        speedup = cbc_times[i] / highs_times[i]
         ax.text(i, max(highs_times[i], cbc_times[i]) * 1.05,
-                f'{speedup:.1f}×', ha='center', fontsize=8, color='green')
+                f'{speedup:.2f}×', ha='center', fontsize=8, color='green')
 
 plt.tight_layout()
 plt.savefig(f'{OUT_DIR}/fig_solver_comparison.pdf')
@@ -143,7 +147,7 @@ print(f"Saved: {OUT_DIR}/fig_solver_comparison.pdf")
 
 
 # ============================================================
-# FIGURE 4: Success Rate by Secret Type (grouped bars at max n)
+# FIGURE 4: Success rate by secret type (bar chart at max n)
 # ============================================================
 max_n = max(dims)
 fig, ax = plt.subplots(figsize=(8, 4.5))
@@ -169,6 +173,5 @@ plt.savefig(f'{OUT_DIR}/fig_success_by_secret.pdf')
 plt.savefig(f'{OUT_DIR}/fig_success_by_secret.png')
 plt.close()
 print(f"Saved: {OUT_DIR}/fig_success_by_secret.pdf")
-
 
 print("\nAll figures generated.")

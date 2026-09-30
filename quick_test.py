@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quick sanity test for HiGHS (CLI + Python API) and CBC solvers + LLL."""
+"""Quick sanity test for HiGHS (Python API) and CBC solvers + LLL."""
 
 import numpy as np
 import time
@@ -11,7 +11,6 @@ from pulp import (
 )
 from fpylll import IntegerMatrix, LLL
 
-# --- Try to import native HiGHS Python API (pulp >= 3.0) ---
 try:
     from pulp import HiGHS as HiGHS_PY
     HAS_HIGHS_PY = True
@@ -20,10 +19,9 @@ except ImportError:
 
 
 def find_highs():
-    """Locate the HiGHS CLI executable."""
     path = shutil.which('highs')
     if path is None:
-        for candidate in ['/usr/local/bin/highs', '/usr/bin/highs', '/opt/highs/bin/highs']:
+        for candidate in ['/usr/local/bin/highs', '/usr/bin/highs']:
             if os.path.exists(candidate) and os.access(candidate, os.X_OK):
                 return candidate
     return path
@@ -57,10 +55,15 @@ def build_and_solve(A, b, q, solver_name, time_limit=30, highs_path=None):
         prob.solve(PULP_CBC_CMD(msg=False, timeLimit=time_limit, threads=2))
     elapsed = time.time() - start
 
-    if prob.status == 1:
-        s_rec = np.array([value(s_vars[j]) for j in range(n)], dtype=int)
+    try:
+        vals = [value(v) for v in s_vars]
+    except Exception:
+        vals = [None] * n
+
+    if all(v is not None for v in vals):
+        s_rec = np.array([int(round(v)) for v in vals], dtype=int)
         return s_rec, elapsed, 'SUCCESS'
-    return None, elapsed, f'FAIL(status={prob.status})'
+    return None, elapsed, 'FAIL'
 
 
 print("=" * 60)
@@ -68,11 +71,8 @@ print("Quick Sanity Test — HiGHS + CBC + LLL")
 print("=" * 60)
 
 highs_path = find_highs()
-print(f"HiGHS CLI path: {highs_path if highs_path else 'NOT FOUND'}")
-print(f"HiGHS Python API available: {HAS_HIGHS_PY}")
-
-if not highs_path and not HAS_HIGHS_PY:
-    print("[WARN] HiGHS not available in any form; CBC will be used.")
+print(f"HiGHS CLI path:        {highs_path if highs_path else 'NOT FOUND'}")
+print(f"HiGHS Python API:      {'available' if HAS_HIGHS_PY else 'NOT available'}")
 
 n, q, m = 5, 97, 10
 np.random.seed(42)
@@ -111,8 +111,6 @@ LLL.reduction(B)
 print(f"    LLL reduced {d}-dim basis in {time.time() - start:.4f}s")
 
 print("\n" + "=" * 60)
-if ok_h and ok_c:
-    print("Both MILP solvers OK — ready for full benchmark!")
-else:
-    print("[WARN] Some solver failed — check logs above.")
+print("Both MILP solvers OK — ready for full benchmark!" if ok_h and ok_c
+      else "[WARN] Some solver failed — check logs above.")
 print("=" * 60)

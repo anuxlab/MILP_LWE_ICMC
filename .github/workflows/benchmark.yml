@@ -7,16 +7,20 @@ on:
     inputs:
       dimensions:
         description: 'Dimensions (space-separated)'
-        default: '5 10 15 20'
+        default: '5 10 15'
       instances:
         description: 'Instances per config'
         default: '10'
       time_limit:
-        description: 'Time limit per attack (seconds)'
+        description: 'Base time limit per attack (seconds)'
         default: '60'
       bkz_beta:
         description: 'BKZ block size'
         default: '15'
+      force_rerun:
+        description: 'Force rerun (ignore checkpoints)'
+        type: boolean
+        default: false
 
 jobs:
   quick-test:
@@ -38,7 +42,7 @@ jobs:
       - name: Verify solvers
         run: |
           python -c "import highspy; print('highspy OK')"
-          python -c "from pulp import HiGHS; print('pulp.HiGHS (native Python API) OK')"
+          python -c "from pulp import HiGHS; print('pulp.HiGHS OK')"
           python -c "from pulp import PULP_CBC_CMD; print('pulp CBC OK')"
           python -c "from fpylll import LLL, BKZ; print('fpylll OK')"
 
@@ -49,7 +53,8 @@ jobs:
     name: Run full benchmark (HiGHS + CBC)
     needs: quick-test
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 340   # 5h40m, under the 6h limit
+
     steps:
       - uses: actions/checkout@v4
 
@@ -63,24 +68,83 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run dual-solver benchmark
+      # ============================================================
+      # RESTORE CHECKPOINTS FROM PREVIOUS RUNS
+      # ============================================================
+      # Restore uses a broad prefix so we always pull the most
+      # recent successful save (see SAVE step below).
+      # 'schema2' is a MANUAL version. Bump to 'schema3' only when
+      # you change the checkpoint JSON format itself.
+      - name: Restore checkpoint cache
+        uses: actions/cache/restore@v4
+        with:
+          path: results/checkpoints
+          key: lwe-checkpoints-schema2-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            lwe-checkpoints-schema2-${{ github.ref_name }}-
+            lwe-checkpoints-schema2-
+
+      # ============================================================
+      # RUN BENCHMARK (continue even if some instances fail)
+      # ============================================================
+      - name: Run benchmark (resumable)
+        id: benchmark
+        continue-on-error: true
         run: |
+          mkdir -p results
           python lwe_benchmark.py \
-            --dimensions ${{ github.event.inputs.dimensions || '5 10 15 20' }} \
+            --dimensions ${{ github.event.inputs.dimensions || '5 10 15' }} \
             --instances ${{ github.event.inputs.instances || '10' }} \
             --time-limit ${{ github.event.inputs.time_limit || '60' }} \
-            --bkz-beta ${{ github.event.inputs.bkz_beta || '15' }}
+            --bkz-beta ${{ github.event.inputs.bkz_beta || '15' }} \
+            ${{ github.event.inputs.force_rerun == 'true' && '--force-rerun' || '' }} \
+            2>&1 | tee results/run.log
 
+      # ============================================================
+      # SAVE CHECKPOINTS EVEN IF THE RUN WAS INTERRUPTED
+      # ============================================================
+      # Uses ${{ github.run_id }} in the save key so each run
+      # creates a NEW cache (avoids 'cache already exists' error).
+      # The next run's restore-keys prefix will match this save.
+      - name: Save checkpoint cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: results/checkpoints
+          key: lwe-checkpoints-schema2-${{ github.ref_name }}-${{ github.run_id }}
+
+      # ============================================================
+      # ARTIFACT BACKUP (survives cache eviction, 90-day retention)
+      # ============================================================
+      - name: Upload checkpoints as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoints-run-${{ github.run_id }}
+          path: results/checkpoints/
+          retention-days: 90
+          if-no-files-found: ignore
+
+      # ============================================================
+      # GENERATE FIGURES AND TABLES
+      # ============================================================
       - name: Generate figures
+        if: always()
+        continue-on-error: true
         run: python generate_figures.py
 
       - name: Generate LaTeX tables
+        if: always()
+        continue-on-error: true
         run: python generate_latex_tables.py
 
+      # ============================================================
+      # UPLOAD FULL RESULTS ARTIFACT
+      # ============================================================
       - name: Upload results
-        uses: actions/upload-artifact@v4
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results
+          name: benchmark-results-${{ github.run_number }}
           path: results/
           retention-days: 30
