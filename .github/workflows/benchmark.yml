@@ -1,3 +1,57 @@
+name: LWE Benchmark
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      instances:
+        description: 'Instances per config'
+        default: '10'
+      time_limit:
+        description: 'Base time limit per attack (seconds)'
+        default: '60'
+      bkz_beta:
+        description: 'BKZ block size'
+        default: '15'
+      force_rerun:
+        description: 'Force rerun (ignore checkpoints)'
+        type: boolean
+        default: false
+
+jobs:
+  # ============================================================
+  # JOB 1: QUICK ENVIRONMENT SANITY CHECK
+  # ============================================================
+  quick-test:
+    name: Environment sanity check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify solvers
+        run: |
+          python -c "import highspy; print('highspy OK')"
+          python -c "from pulp import HiGHS; print('pulp.HiGHS OK')"
+          python -c "from pulp import PULP_CBC_CMD; print('pulp CBC OK')"
+          python -c "from fpylll import LLL, BKZ; print('fpylll OK')"
+
+      - name: Run quick sanity test
+        run: python quick_test.py
+
+  # ============================================================
+  # JOB 2: PARALLEL BENCHMARK (one job per dimension)
+  # ============================================================
   benchmark:
     name: Benchmark n=${{ matrix.dimension }}
     needs: quick-test
@@ -6,10 +60,10 @@
     continue-on-error: true
 
     strategy:
-      fail-fast: false           # keep running even if one dimension fails
-      max-parallel: 6            # cap concurrency to stay within free tier
+      fail-fast: false
+      max-parallel: 6
       matrix:
-        dimension: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]  # <-- only NEW dims here; n=5,10,15 are cached
+        dimension: [5, 10, 15, 20, 25, 30, 40, 50]
 
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +78,6 @@
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ---- Restore SHARED checkpoints (read-only; safe across parallel jobs) ----
       - name: Restore shared checkpoint cache
         uses: actions/cache/restore@v4
         with:
@@ -34,18 +87,17 @@
             lwe-checkpoints-schema6-common-
             lwe-checkpoints-schema5-main-
 
-      # ---- Run ONLY this dimension ----
       - name: Run benchmark for n=${{ matrix.dimension }}
         run: |
           mkdir -p results
           python lwe_benchmark.py \
             --dimensions ${{ matrix.dimension }} \
-            --instances 10 \
-            --time-limit 60 \
-            --bkz-beta 15 \
+            --instances ${{ github.event.inputs.instances || '10' }} \
+            --time-limit ${{ github.event.inputs.time_limit || '60' }} \
+            --bkz-beta ${{ github.event.inputs.bkz_beta || '15' }} \
+            ${{ github.event.inputs.force_rerun == 'true' && '--force-rerun' || '' }} \
             2>&1 | tee results/run_dim${{ matrix.dimension }}.log
 
-      # ---- Save per-dimension checkpoints (unique key; no race) ----
       - name: Save per-dimension checkpoints
         if: always()
         uses: actions/cache/save@v4
@@ -53,8 +105,7 @@
           path: results/checkpoints
           key: lwe-checkpoints-schema6-dim${{ matrix.dimension }}-${{ github.run_id }}
 
-      # ---- Upload per-dimension artifacts (for the merge job) ----
-      - name: Upload per-dim results
+      - name: Upload per-dimension results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -63,6 +114,9 @@
           retention-days: 30
           if-no-files-found: warn
 
+  # ============================================================
+  # JOB 3: MERGE ALL DIMENSIONS AND GENERATE FIGURES
+  # ============================================================
   merge:
     name: Merge all dimensions and generate figures
     needs: [benchmark]
@@ -82,7 +136,6 @@
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ---- Download every per-dimension artifact ----
       - name: Download all per-dimension results
         uses: actions/download-artifact@v4
         with:
@@ -90,7 +143,6 @@
           merge-multiple: true
           path: results/
 
-      # ---- Combine checkpoints into one aggregate ----
       - name: Rebuild benchmark_results.json
         run: |
           python - <<'PY'
@@ -110,14 +162,12 @@
           print(f"Wrote {len(records)} records to {out}")
           PY
 
-      # ---- Generate figures and tables from merged data ----
       - name: Generate figures
         run: python generate_figures.py
 
       - name: Generate LaTeX tables
         run: python generate_latex_tables.py
 
-      # ---- Save the COMBINED checkpoints so future runs can resume ----
       - name: Save combined checkpoint cache
         if: always()
         uses: actions/cache/save@v4
@@ -125,7 +175,6 @@
           path: results/checkpoints
           key: lwe-checkpoints-schema6-common-${{ github.run_id }}
 
-      # ---- Upload final merged artifact ----
       - name: Upload merged results
         uses: actions/upload-artifact@v4
         with:
