@@ -1,0 +1,22 @@
+{
+  "n": 10,
+  "q": 97,
+  "m": 20,
+  "secret_type": "uniform",
+  "instance": 4,
+  "key": "n10_q97_m20_uniform_i4",
+  "seed": 1004,
+  "highs_success": false,
+  "highs_time": 10.049051523208618,
+  "highs_status": "SUCCESS",
+  "cbc_success": false,
+  "cbc_time": 10.083618879318237,
+  "cbc_status": "SUCCESS",
+  "lll_success": false,
+  "lll_time": 0.003278970718383789,
+  "bkz_success": false,
+  "bkz_time": 0.0056591033935546875,
+  "bkz_beta": 15,
+  "verified": false,
+  "timestamp": "2026-09-30T10:27:42.416269"
+}

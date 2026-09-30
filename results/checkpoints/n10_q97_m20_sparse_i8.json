@@ -1,0 +1,22 @@
+{
+  "n": 10,
+  "q": 97,
+  "m": 20,
+  "secret_type": "sparse",
+  "instance": 8,
+  "key": "n10_q97_m20_sparse_i8",
+  "seed": 1008,
+  "highs_success": true,
+  "highs_time": 2.0288259983062744,
+  "highs_status": "SUCCESS",
+  "cbc_success": true,
+  "cbc_time": 0.3290867805480957,
+  "cbc_status": "SUCCESS",
+  "lll_success": true,
+  "lll_time": 0.0027658939361572266,
+  "bkz_success": true,
+  "bkz_time": 0.0050356388092041016,
+  "bkz_beta": 15,
+  "verified": true,
+  "timestamp": "2026-09-30T10:25:59.419566"
+}

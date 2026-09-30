@@ -1,0 +1,169 @@
+======================================================================
+LWE Benchmark (Resumable) — 2026-09-30T10:20:57.486492
+HiGHS CLI path:    NOT FOUND
+HiGHS Python API:  available
+Dimensions:        [5, 10, 15]
+Secret types:      ['ternary', 'sparse', 'uniform']
+Instances/config:  10
+Base time limit:   60s
+BKZ β:             15
+Force rerun:       False
+Checkpoint dir:    results/checkpoints
+======================================================================
+
+>>> n=5, q=97, m=10, secret=ternary (time limit 60s)
+  [  1/90] n5_q97_m10_ternary_i0: HiGHS=OK(  0.08s) | CBC=OK(  0.15s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [  2/90] n5_q97_m10_ternary_i1: HiGHS=OK(  0.11s) | CBC=OK(  0.10s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [  3/90] n5_q97_m10_ternary_i2: HiGHS=OK(  0.09s) | CBC=OK(  0.13s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [  4/90] n5_q97_m10_ternary_i3: HiGHS=OK(  0.03s) | CBC=OK(  0.12s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [  5/90] n5_q97_m10_ternary_i4: HiGHS=OK(  0.19s) | CBC=OK(  0.11s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [  6/90] n5_q97_m10_ternary_i5: HiGHS=OK(  0.10s) | CBC=OK(  0.10s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [  7/90] n5_q97_m10_ternary_i6: HiGHS=OK(  0.07s) | CBC=OK(  0.07s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [  8/90] n5_q97_m10_ternary_i7: HiGHS=OK(  0.13s) | CBC=OK(  0.11s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [  9/90] n5_q97_m10_ternary_i8: HiGHS=OK(  0.04s) | CBC=OK(  0.11s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 10/90] n5_q97_m10_ternary_i9: HiGHS=OK(  0.13s) | CBC=OK(  0.10s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+
+>>> n=5, q=97, m=10, secret=sparse (time limit 60s)
+  [ 11/90] n5_q97_m10_sparse_i0: HiGHS=OK(  0.04s) | CBC=OK(  0.09s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 12/90] n5_q97_m10_sparse_i1: HiGHS=OK(  0.08s) | CBC=OK(  0.11s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 13/90] n5_q97_m10_sparse_i2: HiGHS=OK(  0.05s) | CBC=OK(  0.09s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 14/90] n5_q97_m10_sparse_i3: HiGHS=OK(  0.04s) | CBC=OK(  0.09s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 15/90] n5_q97_m10_sparse_i4: HiGHS=OK(  0.05s) | CBC=OK(  0.16s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 16/90] n5_q97_m10_sparse_i5: HiGHS=OK(  0.08s) | CBC=OK(  0.09s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 17/90] n5_q97_m10_sparse_i6: HiGHS=OK(  0.06s) | CBC=OK(  0.10s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 18/90] n5_q97_m10_sparse_i7: HiGHS=OK(  0.06s) | CBC=OK(  0.13s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 19/90] n5_q97_m10_sparse_i8: HiGHS=OK(  0.02s) | CBC=OK(  0.12s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 20/90] n5_q97_m10_sparse_i9: HiGHS=OK(  0.05s) | CBC=OK(  0.11s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+
+>>> n=5, q=97, m=10, secret=uniform (time limit 10s)
+  [ 21/90] n5_q97_m10_uniform_i0: HiGHS=X( 10.00s) | CBC=X( 10.14s) | LLL=X(  0.00s) | BKZ-15=X(  0.00s)
+  [ 22/90] n5_q97_m10_uniform_i1: HiGHS=X( 10.00s) | CBC=X( 10.10s) | LLL=X(  0.00s) | BKZ-15=X(  0.00s)
+  [ 23/90] n5_q97_m10_uniform_i2: HiGHS=X( 10.00s) | CBC=X( 10.11s) | LLL=X(  0.00s) | BKZ-15=X(  0.00s)
+  [HEARTBEAT] done=23 skipped=0 solved=20 failed=3
+  [ 24/90] n5_q97_m10_uniform_i3: HiGHS=X( 10.00s) | CBC=X( 10.15s) | LLL=X(  0.00s) | BKZ-15=X(  0.00s)
+  [ 25/90] n5_q97_m10_uniform_i4: HiGHS=X( 10.00s) | CBC=X( 10.13s) | LLL=X(  0.00s) | BKZ-15=X(  0.00s)
+  [ 26/90] n5_q97_m10_uniform_i5: HiGHS=X( 10.00s) | CBC=X( 10.12s) | LLL=X(  0.00s) | BKZ-15=X(  0.00s)
+  [HEARTBEAT] done=26 skipped=0 solved=20 failed=6
+  [ 27/90] n5_q97_m10_uniform_i6: HiGHS=X( 10.00s) | CBC=X( 10.15s) | LLL=X(  0.00s) | BKZ-15=X(  0.00s)
+  [ 28/90] n5_q97_m10_uniform_i7: HiGHS=X( 10.00s) | CBC=X( 10.14s) | LLL=X(  0.00s) | BKZ-15=X(  0.00s)
+  [ 29/90] n5_q97_m10_uniform_i8: HiGHS=X( 10.02s) | CBC=X( 10.16s) | LLL=X(  0.00s) | BKZ-15=X(  0.00s)
+  [HEARTBEAT] done=29 skipped=0 solved=20 failed=9
+  [ 30/90] n5_q97_m10_uniform_i9: HiGHS=X( 10.00s) | CBC=X( 10.14s) | LLL=X(  0.00s) | BKZ-15=X(  0.00s)
+
+>>> n=10, q=97, m=20, secret=ternary (time limit 60s)
+  [ 31/90] n10_q97_m20_ternary_i0: HiGHS=OK(  5.69s) | CBC=OK(  2.23s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 32/90] n10_q97_m20_ternary_i1: HiGHS=OK(  3.93s) | CBC=OK(  2.21s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 33/90] n10_q97_m20_ternary_i2: HiGHS=OK(  7.34s) | CBC=OK(  2.33s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 34/90] n10_q97_m20_ternary_i3: HiGHS=OK(  5.97s) | CBC=OK(  2.54s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 35/90] n10_q97_m20_ternary_i4: HiGHS=OK(  6.70s) | CBC=OK(  2.29s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [HEARTBEAT] done=35 skipped=0 solved=25 failed=10
+  [ 36/90] n10_q97_m20_ternary_i5: HiGHS=OK(  3.72s) | CBC=OK(  2.43s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 37/90] n10_q97_m20_ternary_i6: HiGHS=OK(  5.29s) | CBC=OK(  2.39s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 38/90] n10_q97_m20_ternary_i7: HiGHS=OK(  1.63s) | CBC=OK(  2.32s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 39/90] n10_q97_m20_ternary_i8: HiGHS=OK(  2.41s) | CBC=OK(  2.10s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 40/90] n10_q97_m20_ternary_i9: HiGHS=OK(  5.70s) | CBC=OK(  2.55s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+
+>>> n=10, q=97, m=20, secret=sparse (time limit 60s)
+  [ 41/90] n10_q97_m20_sparse_i0: HiGHS=OK(  2.02s) | CBC=OK(  1.14s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 42/90] n10_q97_m20_sparse_i1: HiGHS=OK(  1.58s) | CBC=OK(  0.53s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 43/90] n10_q97_m20_sparse_i2: HiGHS=OK(  5.48s) | CBC=OK(  0.45s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 44/90] n10_q97_m20_sparse_i3: HiGHS=OK(  2.11s) | CBC=OK(  0.29s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 45/90] n10_q97_m20_sparse_i4: HiGHS=OK(  0.85s) | CBC=OK(  0.46s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 46/90] n10_q97_m20_sparse_i5: HiGHS=OK(  1.42s) | CBC=OK(  1.64s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.00s)
+  [ 47/90] n10_q97_m20_sparse_i6: HiGHS=OK(  1.80s) | CBC=OK(  0.80s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 48/90] n10_q97_m20_sparse_i7: HiGHS=OK(  1.63s) | CBC=OK(  0.33s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 49/90] n10_q97_m20_sparse_i8: HiGHS=OK(  2.03s) | CBC=OK(  0.33s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+  [ 50/90] n10_q97_m20_sparse_i9: HiGHS=OK(  1.83s) | CBC=OK(  0.41s) | LLL=OK(  0.00s) | BKZ-15=OK(  0.01s)
+
+>>> n=10, q=97, m=20, secret=uniform (time limit 10s)
+  [ 51/90] n10_q97_m20_uniform_i0: HiGHS=X( 10.04s) | CBC=X( 10.12s) | LLL=X(  0.00s) | BKZ-15=X(  0.01s)
+  [HEARTBEAT] done=51 skipped=0 solved=40 failed=11
+  [ 52/90] n10_q97_m20_uniform_i1: HiGHS=X( 10.01s) | CBC=X( 10.10s) | LLL=X(  0.00s) | BKZ-15=X(  0.01s)
+  [ 53/90] n10_q97_m20_uniform_i2: HiGHS=X( 10.01s) | CBC=X( 10.20s) | LLL=X(  0.00s) | BKZ-15=X(  0.01s)
+  [ 54/90] n10_q97_m20_uniform_i3: HiGHS=X( 10.01s) | CBC=X( 10.09s) | LLL=X(  0.00s) | BKZ-15=X(  0.01s)
+  [HEARTBEAT] done=54 skipped=0 solved=40 failed=14
+  [ 55/90] n10_q97_m20_uniform_i4: HiGHS=X( 10.05s) | CBC=X( 10.08s) | LLL=X(  0.00s) | BKZ-15=X(  0.01s)
+  [ 56/90] n10_q97_m20_uniform_i5: HiGHS=X( 10.01s) | CBC=X( 10.09s) | LLL=X(  0.00s) | BKZ-15=X(  0.01s)
+  [ 57/90] n10_q97_m20_uniform_i6: HiGHS=X( 10.01s) | CBC=X( 10.19s) | LLL=X(  0.00s) | BKZ-15=X(  0.01s)
+  [HEARTBEAT] done=57 skipped=0 solved=40 failed=17
+  [ 58/90] n10_q97_m20_uniform_i7: HiGHS=X( 10.01s) | CBC=X( 10.16s) | LLL=X(  0.00s) | BKZ-15=X(  0.01s)
+  [ 59/90] n10_q97_m20_uniform_i8: HiGHS=X( 10.01s) | CBC=X( 10.07s) | LLL=X(  0.00s) | BKZ-15=X(  0.01s)
+  [ 60/90] n10_q97_m20_uniform_i9: HiGHS=X( 10.01s) | CBC=X( 10.08s) | LLL=X(  0.00s) | BKZ-15=X(  0.01s)
+  [HEARTBEAT] done=60 skipped=0 solved=40 failed=20
+
+>>> n=15, q=97, m=30, secret=ternary (time limit 60s)
+  [ 61/90] n15_q97_m30_ternary_i0: HiGHS=X( 60.01s) | CBC=X( 60.45s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=61 skipped=0 solved=41 failed=20
+  [ 62/90] n15_q97_m30_ternary_i1: HiGHS=X( 60.01s) | CBC=X( 60.48s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=62 skipped=0 solved=42 failed=20
+  [ 63/90] n15_q97_m30_ternary_i2: HiGHS=X( 60.01s) | CBC=X( 60.68s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=63 skipped=0 solved=43 failed=20
+  [ 64/90] n15_q97_m30_ternary_i3: HiGHS=X( 60.01s) | CBC=X( 60.66s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=64 skipped=0 solved=44 failed=20
+  [ 65/90] n15_q97_m30_ternary_i4: HiGHS=X( 60.01s) | CBC=X( 60.70s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=65 skipped=0 solved=45 failed=20
+  [ 66/90] n15_q97_m30_ternary_i5: HiGHS=OK( 60.01s) | CBC=X( 60.72s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=66 skipped=0 solved=46 failed=20
+  [ 67/90] n15_q97_m30_ternary_i6: HiGHS=X( 60.01s) | CBC=X( 60.66s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=67 skipped=0 solved=47 failed=20
+  [ 68/90] n15_q97_m30_ternary_i7: HiGHS=X( 60.01s) | CBC=X( 60.68s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=68 skipped=0 solved=48 failed=20
+  [ 69/90] n15_q97_m30_ternary_i8: HiGHS=X( 60.01s) | CBC=X( 60.70s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=69 skipped=0 solved=49 failed=20
+  [ 70/90] n15_q97_m30_ternary_i9: HiGHS=X( 60.01s) | CBC=X( 60.75s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=70 skipped=0 solved=50 failed=20
+
+>>> n=15, q=97, m=30, secret=sparse (time limit 60s)
+  [ 71/90] n15_q97_m30_sparse_i0: HiGHS=OK( 16.81s) | CBC=OK(  3.38s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [ 72/90] n15_q97_m30_sparse_i1: HiGHS=OK( 35.68s) | CBC=OK(  4.56s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=72 skipped=0 solved=52 failed=20
+  [ 73/90] n15_q97_m30_sparse_i2: HiGHS=OK( 13.47s) | CBC=OK(  4.31s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [ 74/90] n15_q97_m30_sparse_i3: HiGHS=OK( 15.77s) | CBC=OK(  3.47s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [ 75/90] n15_q97_m30_sparse_i4: HiGHS=OK( 14.32s) | CBC=OK(  5.00s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [ 76/90] n15_q97_m30_sparse_i5: HiGHS=OK( 21.18s) | CBC=OK(  2.43s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=76 skipped=0 solved=56 failed=20
+  [ 77/90] n15_q97_m30_sparse_i6: HiGHS=OK(  8.25s) | CBC=OK(  4.28s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [ 78/90] n15_q97_m30_sparse_i7: HiGHS=OK(  7.29s) | CBC=OK(  3.99s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [ 79/90] n15_q97_m30_sparse_i8: HiGHS=OK( 17.76s) | CBC=OK(  3.89s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [ 80/90] n15_q97_m30_sparse_i9: HiGHS=OK( 12.30s) | CBC=OK(  3.23s) | LLL=OK(  0.01s) | BKZ-15=OK(  0.02s)
+  [HEARTBEAT] done=80 skipped=0 solved=60 failed=20
+
+>>> n=15, q=97, m=30, secret=uniform (time limit 10s)
+  [ 81/90] n15_q97_m30_uniform_i0: HiGHS=X( 10.01s) | CBC=X( 10.13s) | LLL=X(  0.01s) | BKZ-15=X(  0.02s)
+  [ 82/90] n15_q97_m30_uniform_i1: HiGHS=X( 10.01s) | CBC=X( 10.14s) | LLL=X(  0.01s) | BKZ-15=X(  0.02s)
+  [ 83/90] n15_q97_m30_uniform_i2: HiGHS=X( 10.01s) | CBC=X( 10.14s) | LLL=X(  0.01s) | BKZ-15=X(  0.02s)
+  [HEARTBEAT] done=83 skipped=0 solved=60 failed=23
+  [ 84/90] n15_q97_m30_uniform_i3: HiGHS=X( 10.01s) | CBC=X( 10.13s) | LLL=X(  0.01s) | BKZ-15=X(  0.02s)
+  [ 85/90] n15_q97_m30_uniform_i4: HiGHS=X( 10.01s) | CBC=X( 10.15s) | LLL=X(  0.01s) | BKZ-15=X(  0.02s)
+  [ 86/90] n15_q97_m30_uniform_i5: HiGHS=X( 10.01s) | CBC=X( 10.09s) | LLL=X(  0.01s) | BKZ-15=X(  0.02s)
+  [HEARTBEAT] done=86 skipped=0 solved=60 failed=26
+  [ 87/90] n15_q97_m30_uniform_i6: HiGHS=X( 10.01s) | CBC=X( 10.13s) | LLL=X(  0.01s) | BKZ-15=X(  0.02s)
+  [ 88/90] n15_q97_m30_uniform_i7: HiGHS=X( 10.01s) | CBC=X( 10.15s) | LLL=X(  0.01s) | BKZ-15=X(  0.02s)
+  [ 89/90] n15_q97_m30_uniform_i8: HiGHS=X( 10.02s) | CBC=X( 10.15s) | LLL=X(  0.01s) | BKZ-15=X(  0.02s)
+  [HEARTBEAT] done=89 skipped=0 solved=60 failed=29
+  [ 90/90] n15_q97_m30_uniform_i9: HiGHS=X( 10.01s) | CBC=X( 10.14s) | LLL=X(  0.01s) | BKZ-15=X(  0.02s)
+
+======================================================================
+Rebuilding aggregate results from checkpoints...
+Aggregate written: results/benchmark_results.json (90 records)
+======================================================================
+
+n     Secret     HiGHS     CBC       LLL       BKZ      
+-------------------------------------------------------
+5     ternary     100.0%   100.0%   100.0%   100.0%
+5     sparse      100.0%   100.0%   100.0%   100.0%
+5     uniform       0.0%     0.0%     0.0%     0.0%
+10    ternary     100.0%   100.0%   100.0%   100.0%
+10    sparse      100.0%   100.0%   100.0%   100.0%
+10    uniform       0.0%     0.0%     0.0%     0.0%
+15    ternary      10.0%     0.0%   100.0%   100.0%
+15    sparse      100.0%   100.0%   100.0%   100.0%
+15    uniform       0.0%     0.0%     0.0%     0.0%
+
+======================================================================
+HiGHS vs. CBC Summary
+======================================================================
+  HiGHS mean: 12.599s  |  CBC mean: 10.898s
+  Speedup (CBC/HiGHS): 0.87x
+
+  Total: 90 records  |  Skipped: 0  |  Solved: 60  |  Failed: 30
