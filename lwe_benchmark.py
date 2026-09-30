@@ -2,12 +2,15 @@
 """
 LWE Benchmark: MILP (HiGHS + CBC) vs. Lattice Reduction (LLL/BKZ)
 Records all solvers' success/time on identical instances for comparison.
+
+Falls back to CBC if HiGHS binary is unavailable.
 """
 
 import numpy as np
 import time
 import os
 import json
+import shutil
 import argparse
 from datetime import datetime
 from pulp import (
@@ -18,9 +21,23 @@ from fpylll import IntegerMatrix, LLL, BKZ
 
 
 # ============================================================
+# HiGHS DETECTION
+# ============================================================
+def find_highs():
+    """Locate the HiGHS executable on the system."""
+    path = shutil.which('highs')
+    if path is None:
+        for candidate in ['/usr/bin/highs', '/usr/local/bin/highs', '/opt/highs/bin/highs']:
+            if os.path.exists(candidate) and os.access(candidate, os.X_OK):
+                return candidate
+    return path
+
+
+# ============================================================
 # 1. LWE INSTANCE GENERATION
 # ============================================================
 def generate_lwe_instance(n, q, m, secret_type='ternary', error_sigma=1.0, seed=None):
+    """Generate a Search-LWE instance (A, b, s_true, e_true)."""
     if seed is not None:
         np.random.seed(seed)
 
@@ -43,8 +60,12 @@ def generate_lwe_instance(n, q, m, secret_type='ternary', error_sigma=1.0, seed=
 # ============================================================
 # 2. MILP ATTACK (parameterized solver: 'highs' or 'cbc')
 # ============================================================
-def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs', time_limit=60):
-    """Solve Search-LWE with MILP. solver ∈ {'highs', 'cbc'}."""
+def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs',
+                   time_limit=60, highs_path=None):
+    """
+    Solve Search-LWE with MILP.
+    solver ∈ {'highs', 'cbc'}. Falls back to CBC if HiGHS path is None.
+    """
     m, n = A.shape
     ERROR_BOUND = 20  # tight bound; true errors are ~N(0,1)
 
@@ -81,8 +102,11 @@ def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs', time_limit=60
 
     start = time.time()
     try:
-        if solver == 'highs':
-            prob.solve(HiGHS_CMD(msg=False, timeLimit=time_limit))
+        if solver == 'highs' and highs_path:
+            prob.solve(HiGHS_CMD(path=highs_path, msg=False, timeLimit=time_limit))
+        elif solver == 'highs':
+            # Fallback to CBC if HiGHS binary missing
+            prob.solve(PULP_CBC_CMD(msg=False, timeLimit=time_limit, threads=2))
         else:
             prob.solve(PULP_CBC_CMD(msg=False, timeLimit=time_limit, threads=2))
         elapsed = time.time() - start
@@ -100,6 +124,7 @@ def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs', time_limit=60
 # 3. LATTICE REDUCTION ATTACK (fpylll)
 # ============================================================
 def solve_lwe_lattice(A, b, q, method='LLL', beta=20, time_limit=60):
+    """Primal attack (uSVP) with LLL or BKZ via fpylll."""
     m, n = A.shape
     d = m + n + 1
 
@@ -139,14 +164,20 @@ def solve_lwe_lattice(A, b, q, method='LLL', beta=20, time_limit=60):
 # 4. MAIN BENCHMARK
 # ============================================================
 def run_benchmark(args):
+    # Detect HiGHS once
+    highs_path = find_highs()
     print("=" * 70)
     print(f"LWE Benchmark (Dual-Solver) — {datetime.now().isoformat()}")
+    print(f"HiGHS path: {highs_path if highs_path else 'NOT FOUND (will fall back to CBC)'}")
     print(f"Dimensions: {args.dimensions}")
     print(f"Secret types: {args.secret_types}")
     print(f"Instances/config: {args.instances}")
     print(f"Time limit/attack: {args.time_limit}s")
     print(f"BKZ β: {args.bkz_beta}")
     print("=" * 70)
+
+    if highs_path is None:
+        print("[WARN] HiGHS binary not available. 'HiGHS' results will use CBC.")
 
     os.makedirs(args.output_dir, exist_ok=True)
     results = []
@@ -168,25 +199,36 @@ def run_benchmark(args):
 
                 # --- MILP: HiGHS ---
                 t0 = time.time()
-                s_h, _, st_h = solve_lwe_milp(A, b, args.q, sec_type, 'highs', args.time_limit)
+                s_h, _, st_h = solve_lwe_milp(
+                    A, b, args.q, sec_type, 'highs',
+                    time_limit=args.time_limit, highs_path=highs_path,
+                )
                 t_h = time.time() - t0
                 ok_h = (s_h is not None) and np.array_equal(s_h, s_true)
 
                 # --- MILP: CBC ---
                 t0 = time.time()
-                s_c, _, st_c = solve_lwe_milp(A, b, args.q, sec_type, 'cbc', args.time_limit)
+                s_c, _, st_c = solve_lwe_milp(
+                    A, b, args.q, sec_type, 'cbc',
+                    time_limit=args.time_limit,
+                )
                 t_c = time.time() - t0
                 ok_c = (s_c is not None) and np.array_equal(s_c, s_true)
 
                 # --- LLL ---
                 t0 = time.time()
-                s_l, _, _ = solve_lwe_lattice(A, b, args.q, 'LLL', time_limit=args.time_limit)
+                s_l, _, _ = solve_lwe_lattice(
+                    A, b, args.q, 'LLL', time_limit=args.time_limit
+                )
                 t_l = time.time() - t0
                 ok_l = (s_l is not None) and np.array_equal(s_l, s_true)
 
                 # --- BKZ ---
                 t0 = time.time()
-                s_b, _, _ = solve_lwe_lattice(A, b, args.q, 'BKZ', beta=args.bkz_beta, time_limit=args.time_limit)
+                s_b, _, _ = solve_lwe_lattice(
+                    A, b, args.q, 'BKZ',
+                    beta=args.bkz_beta, time_limit=args.time_limit,
+                )
                 t_b = time.time() - t0
                 ok_b = (s_b is not None) and np.array_equal(s_b, s_true)
 
@@ -200,10 +242,17 @@ def run_benchmark(args):
                 results.append({
                     'n': n, 'q': args.q, 'm': m, 'secret_type': sec_type,
                     'instance': inst,
-                    'highs_success': bool(ok_h), 'highs_time': t_h, 'highs_status': st_h,
-                    'cbc_success': bool(ok_c), 'cbc_time': t_c, 'cbc_status': st_c,
-                    'lll_success': bool(ok_l), 'lll_time': t_l,
-                    'bkz_success': bool(ok_b), 'bkz_time': t_b, 'bkz_beta': args.bkz_beta,
+                    'highs_success': bool(ok_h),
+                    'highs_time': t_h,
+                    'highs_status': st_h,
+                    'cbc_success': bool(ok_c),
+                    'cbc_time': t_c,
+                    'cbc_status': st_c,
+                    'lll_success': bool(ok_l),
+                    'lll_time': t_l,
+                    'bkz_success': bool(ok_b),
+                    'bkz_time': t_b,
+                    'bkz_beta': args.bkz_beta,
                 })
 
                 # Incremental save so crashes don't lose progress
@@ -219,40 +268,55 @@ def run_benchmark(args):
 
     print(f"\n{'n':<5} {'Secret':<10} {'HiGHS':<9} {'CBC':<9} {'LLL':<9} {'BKZ':<9}")
     print("-" * 55)
+
+    def rate(sub, key):
+        return sum(r[key] for r in sub) / len(sub) * 100 if sub else 0.0
+
     for n in args.dimensions:
         for sec_type in args.secret_types:
             sub = [r for r in results if r['n'] == n and r['secret_type'] == sec_type]
             if sub:
-                def rate(key):
-                    return sum(r[key] for r in sub) / len(sub) * 100
                 print(f"{n:<5} {sec_type:<10} "
-                      f"{rate('highs_success'):>6.1f}%  "
-                      f"{rate('cbc_success'):>6.1f}%  "
-                      f"{rate('lll_success'):>6.1f}%  "
-                      f"{rate('bkz_success'):>6.1f}%")
+                      f"{rate(sub, 'highs_success'):>6.1f}%  "
+                      f"{rate(sub, 'cbc_success'):>6.1f}%  "
+                      f"{rate(sub, 'lll_success'):>6.1f}%  "
+                      f"{rate(sub, 'bkz_success'):>6.1f}%")
 
     # Solver-vs-solver summary
     print("\n" + "=" * 70)
     print("HiGHS vs. CBC Solver Comparison")
     print("=" * 70)
     n_records = len(results)
-    highs_wins = sum(1 for r in results if r['highs_time'] < r['cbc_time'] and r['highs_success'])
-    cbc_wins = sum(1 for r in results if r['cbc_time'] < r['highs_time'] and r['cbc_success'])
+    highs_wins = sum(1 for r in results
+                     if r['highs_time'] < r['cbc_time'] and r['highs_success'])
+    cbc_wins = sum(1 for r in results
+                   if r['cbc_time'] < r['highs_time'] and r['cbc_success'])
     ties = n_records - highs_wins - cbc_wins
-    mean_h = np.mean([r['highs_time'] for r in results])
-    mean_c = np.mean([r['cbc_time'] for r in results])
+    mean_h = float(np.mean([r['highs_time'] for r in results]))
+    mean_c = float(np.mean([r['cbc_time'] for r in results]))
     print(f"  HiGHS mean time: {mean_h:.3f}s  |  CBC mean time: {mean_c:.3f}s")
-    print(f"  HiGHS faster:    {highs_wins}/{n_records} ({highs_wins/n_records*100:.1f}%)")
-    print(f"  CBC faster:      {cbc_wins}/{n_records} ({cbc_wins/n_records*100:.1f}%)")
+    print(f"  HiGHS faster:    {highs_wins}/{n_records} "
+          f"({highs_wins / n_records * 100:.1f}%)")
+    print(f"  CBC faster:      {cbc_wins}/{n_records} "
+          f"({cbc_wins / n_records * 100:.1f}%)")
     print(f"  Ties:            {ties}/{n_records}")
+    if mean_h > 0:
+        print(f"  Overall speedup (CBC/HiGHS): {mean_c / mean_h:.2f}x")
 
     return results
 
 
+# ============================================================
+# 5. ARGUMENT PARSER
+# ============================================================
 def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dimensions', type=int, nargs='+', default=[5, 10, 15, 20])
-    parser.add_argument('--secret-types', nargs='+', default=['ternary', 'sparse', 'uniform'])
+    parser = argparse.ArgumentParser(
+        description='LWE Benchmark: MILP (HiGHS/CBC) vs. LLL/BKZ'
+    )
+    parser.add_argument('--dimensions', type=int, nargs='+',
+                        default=[5, 10, 15, 20])
+    parser.add_argument('--secret-types', nargs='+',
+                        default=['ternary', 'sparse', 'uniform'])
     parser.add_argument('--instances', type=int, default=10)
     parser.add_argument('--q', type=int, default=97)
     parser.add_argument('--sample-ratio', type=int, default=2)

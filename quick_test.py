@@ -3,6 +3,7 @@
 
 import numpy as np
 import time
+import shutil
 from pulp import (
     LpProblem, LpVariable, LpInteger, lpSum, LpMinimize,
     PULP_CBC_CMD, HiGHS_CMD, value,
@@ -10,7 +11,18 @@ from pulp import (
 from fpylll import IntegerMatrix, LLL
 
 
-def build_and_solve(A, b, q, solver_name, time_limit=30):
+def find_highs():
+    """Locate the HiGHS executable."""
+    path = shutil.which('highs')
+    if path is None:
+        # Check common installation paths
+        for candidate in ['/usr/bin/highs', '/usr/local/bin/highs', '/opt/highs/bin/highs']:
+            if shutil.which(candidate):
+                return candidate
+    return path
+
+
+def build_and_solve(A, b, q, solver_name, time_limit=30, highs_path=None):
     m, n = A.shape
     ERROR_BOUND = 20
 
@@ -26,7 +38,12 @@ def build_and_solve(A, b, q, solver_name, time_limit=30):
 
     start = time.time()
     if solver_name == 'highs':
-        prob.solve(HiGHS_CMD(msg=False, timeLimit=time_limit))
+        if highs_path:
+            prob.solve(HiGHS_CMD(path=highs_path, msg=False, timeLimit=time_limit))
+        else:
+            # Fallback to CBC if HiGHS binary is missing
+            print("    [WARN] HiGHS binary not found, falling back to CBC")
+            prob.solve(PULP_CBC_CMD(msg=False, timeLimit=time_limit, threads=2))
     else:
         prob.solve(PULP_CBC_CMD(msg=False, timeLimit=time_limit, threads=2))
     elapsed = time.time() - start
@@ -41,6 +58,13 @@ print("=" * 60)
 print("Quick Sanity Test — HiGHS + CBC + LLL")
 print("=" * 60)
 
+# Detect HiGHS
+highs_path = find_highs()
+if highs_path:
+    print(f"HiGHS executable found at: {highs_path}")
+else:
+    print("HiGHS executable NOT found — will fall back to CBC")
+
 n, q, m = 5, 97, 10
 np.random.seed(42)
 
@@ -52,7 +76,7 @@ b = (A @ s_true + e_true) % q
 print(f"True secret: {s_true}")
 
 print("\n[1] MILP — HiGHS solver")
-s_h, t_h, st_h = build_and_solve(A, b, q, 'highs')
+s_h, t_h, st_h = build_and_solve(A, b, q, 'highs', highs_path=highs_path)
 print(f"    Status: {st_h}, Time: {t_h:.3f}s, Match: {np.array_equal(s_h, s_true) if s_h is not None else False}")
 
 print("\n[2] MILP — CBC solver")

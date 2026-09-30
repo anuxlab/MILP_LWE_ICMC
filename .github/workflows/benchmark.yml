@@ -28,10 +28,21 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - name: Install dependencies
+
+      # ---- NEW: Install the HiGHS solver binary ----
+      - name: Install HiGHS solver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y highs
+
+      - name: Verify HiGHS installation
+        run: highs --version
+
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
       - name: Run quick sanity test
         run: python quick_test.py
 
@@ -46,7 +57,14 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - name: Install dependencies
+
+      # ---- NEW: Install the HiGHS solver binary ----
+      - name: Install HiGHS solver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y highs
+
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
