@@ -323,13 +323,13 @@ def run_benchmark(args):
                 t0 = time.time()
                 s_l, _, _ = solve_lwe_lattice(A, b, args.q, 'LLL', time_limit=tl)
                 t_l = time.time() - t0
-                ok_l = (s_l is not None) and np.array_equal(s_l, s_true)
+                ok_l = (s_l is not None) and np.array_equal(np.asarray(s_l) % args.q, np.asarray(s_true) % args.q)
 
                 t0 = time.time()
                 s_b, _, _ = solve_lwe_lattice(A, b, args.q, 'BKZ',
                                                beta=args.bkz_beta, time_limit=tl)
                 t_b = time.time() - t0
-                ok_b = (s_b is not None) and np.array_equal(s_b, s_true)
+                ok_b = (s_b is not None) and np.array_equal(np.asarray(s_b) % args.q, np.asarray(s_true) % args.q)
 
                 verified = ok_h or ok_c or ok_l or ok_b
                 if verified:
