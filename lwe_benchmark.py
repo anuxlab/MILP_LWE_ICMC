@@ -3,7 +3,10 @@
 LWE Benchmark: MILP (HiGHS + CBC) vs. Lattice Reduction (LLL/BKZ)
 Records all solvers' success/time on identical instances for comparison.
 
-Falls back to CBC if HiGHS binary is unavailable.
+Solver priority for 'highs':
+  1. HiGHS CLI binary (via HiGHS_CMD, path detected)
+  2. Native HiGHS Python API (pulp.HiGHS)
+  3. Fallback to CBC (with warning)
 """
 
 import numpy as np
@@ -19,15 +22,22 @@ from pulp import (
 )
 from fpylll import IntegerMatrix, LLL, BKZ
 
+# --- Try native HiGHS Python API (pulp >= 3.0) ---
+try:
+    from pulp import HiGHS as HiGHS_PY
+    HAS_HIGHS_PY = True
+except ImportError:
+    HAS_HIGHS_PY = False
+
 
 # ============================================================
 # HiGHS DETECTION
 # ============================================================
 def find_highs():
-    """Locate the HiGHS executable on the system."""
+    """Locate the HiGHS CLI executable on the system."""
     path = shutil.which('highs')
     if path is None:
-        for candidate in ['/usr/bin/highs', '/usr/local/bin/highs', '/opt/highs/bin/highs']:
+        for candidate in ['/usr/local/bin/highs', '/usr/bin/highs', '/opt/highs/bin/highs']:
             if os.path.exists(candidate) and os.access(candidate, os.X_OK):
                 return candidate
     return path
@@ -64,7 +74,12 @@ def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs',
                    time_limit=60, highs_path=None):
     """
     Solve Search-LWE with MILP.
-    solver ∈ {'highs', 'cbc'}. Falls back to CBC if HiGHS path is None.
+
+    Solver selection:
+      - solver='highs' + highs_path set  → HiGHS CLI
+      - solver='highs' + no CLI          → native HiGHS Python API (if available)
+      - solver='highs' + neither         → CBC fallback
+      - solver='cbc'                     → CBC
     """
     m, n = A.shape
     ERROR_BOUND = 20  # tight bound; true errors are ~N(0,1)
@@ -74,7 +89,7 @@ def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs',
     # Secret bounds based on structure
     if secret_type in ('ternary', 'sparse'):
         s_low, s_high = -1, 1
-    else:
+    else:  # uniform
         s_low, s_high = 0, q - 1
 
     s_vars = [LpVariable(f"s_{j}", lowBound=s_low, upBound=s_high, cat=LpInteger) for j in range(n)]
@@ -82,6 +97,7 @@ def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs',
     e_plus = [LpVariable(f"ep_{i}", lowBound=0, upBound=ERROR_BOUND, cat=LpInteger) for i in range(m)]
     e_minus = [LpVariable(f"em_{i}", lowBound=0, upBound=ERROR_BOUND, cat=LpInteger) for i in range(m)]
 
+    # Structural constraints
     if secret_type == 'ternary':
         s_pos = [LpVariable(f"sp_{j}", cat='Binary') for j in range(n)]
         s_neg = [LpVariable(f"sn_{j}", cat='Binary') for j in range(n)]
@@ -95,8 +111,10 @@ def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs',
             prob += s_vars[j] >= -z_vars[j]
         prob += lpSum(z_vars) <= 4
 
+    # Objective: minimize L1 error
     prob += lpSum(e_plus[i] + e_minus[i] for i in range(m))
 
+    # Modular equality constraints
     for i in range(m):
         prob += lpSum(A[i, j] * s_vars[j] for j in range(n)) + e_plus[i] - e_minus[i] - q * k_vars[i] == b[i]
 
@@ -104,15 +122,17 @@ def solve_lwe_milp(A, b, q, secret_type='ternary', solver='highs',
     try:
         if solver == 'highs' and highs_path:
             prob.solve(HiGHS_CMD(path=highs_path, msg=False, timeLimit=time_limit))
+        elif solver == 'highs' and HAS_HIGHS_PY:
+            prob.solve(HiGHS_PY(msg=False, timeLimit=time_limit))
         elif solver == 'highs':
-            # Fallback to CBC if HiGHS binary missing
+            # No HiGHS in any form — fall back to CBC
             prob.solve(PULP_CBC_CMD(msg=False, timeLimit=time_limit, threads=2))
         else:
             prob.solve(PULP_CBC_CMD(msg=False, timeLimit=time_limit, threads=2))
         elapsed = time.time() - start
     except Exception as e:
         print(f"    [{solver.upper()} ERROR] {e}")
-        return None, time_limit, 'ERROR'
+        return None, time.time() - start, 'ERROR'
 
     if prob.status == 1:
         s_rec = np.array([value(s_vars[j]) for j in range(n)], dtype=int)
@@ -148,7 +168,7 @@ def solve_lwe_lattice(A, b, q, method='LLL', beta=20, time_limit=60):
         elapsed = time.time() - start
     except Exception as e:
         print(f"    [{method} ERROR] {e}")
-        return None, time_limit, 'ERROR'
+        return None, time.time() - start, 'ERROR'
 
     for i in range(min(5, d)):
         v = [B[i, j] for j in range(d)]
@@ -166,18 +186,19 @@ def solve_lwe_lattice(A, b, q, method='LLL', beta=20, time_limit=60):
 def run_benchmark(args):
     # Detect HiGHS once
     highs_path = find_highs()
+
     print("=" * 70)
     print(f"LWE Benchmark (Dual-Solver) — {datetime.now().isoformat()}")
-    print(f"HiGHS path: {highs_path if highs_path else 'NOT FOUND (will fall back to CBC)'}")
-    print(f"Dimensions: {args.dimensions}")
-    print(f"Secret types: {args.secret_types}")
-    print(f"Instances/config: {args.instances}")
-    print(f"Time limit/attack: {args.time_limit}s")
-    print(f"BKZ β: {args.bkz_beta}")
+    print(f"HiGHS CLI path:        {highs_path if highs_path else 'NOT FOUND'}")
+    print(f"HiGHS Python API:      {'available' if HAS_HIGHS_PY else 'NOT available'}")
+    if not highs_path and not HAS_HIGHS_PY:
+        print("[WARN] HiGHS not available in any form. 'HiGHS' results will use CBC.")
+    print(f"Dimensions:            {args.dimensions}")
+    print(f"Secret types:          {args.secret_types}")
+    print(f"Instances/config:      {args.instances}")
+    print(f"Time limit/attack:     {args.time_limit}s")
+    print(f"BKZ β:                 {args.bkz_beta}")
     print("=" * 70)
-
-    if highs_path is None:
-        print("[WARN] HiGHS binary not available. 'HiGHS' results will use CBC.")
 
     os.makedirs(args.output_dir, exist_ok=True)
     results = []
@@ -197,7 +218,7 @@ def run_benchmark(args):
                     n, args.q, m, sec_type, seed=seed
                 )
 
-                # --- MILP: HiGHS ---
+                # --- MILP: HiGHS (CLI → Python API → CBC fallback) ---
                 t0 = time.time()
                 s_h, _, st_h = solve_lwe_milp(
                     A, b, args.q, sec_type, 'highs',

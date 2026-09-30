@@ -29,14 +29,18 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      # ---- NEW: Install the HiGHS solver binary ----
-      - name: Install HiGHS solver
+      - name: Install HiGHS binary (from GitHub releases)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y highs
-
-      - name: Verify HiGHS installation
-        run: highs --version
+          HIGHS_VER=1.7.2
+          cd /tmp
+          wget -q "https://github.com/ERGO-Code/HiGHS/releases/download/v${HIGHS_VER}/highs-${HIGHS_VER}-linux-x64.tar.gz" -O highs.tar.gz \
+            || wget -q "https://github.com/ERGO-Code/HiGHS/releases/download/v${HIGHS_VER}/HiGHS-${HIGHS_VER}-linux-x64.tar.gz" -O highs.tar.gz
+          tar -xzf highs.tar.gz
+          BIN=$(find /tmp -name highs -type f -executable | head -1)
+          echo "Found HiGHS binary at: $BIN"
+          sudo cp "$BIN" /usr/local/bin/highs
+          sudo chmod +x /usr/local/bin/highs
+          highs --version
 
       - name: Install Python dependencies
         run: |
@@ -58,11 +62,18 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      # ---- NEW: Install the HiGHS solver binary ----
-      - name: Install HiGHS solver
+      - name: Install HiGHS binary (from GitHub releases)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y highs
+          HIGHS_VER=1.7.2
+          cd /tmp
+          wget -q "https://github.com/ERGO-Code/HiGHS/releases/download/v${HIGHS_VER}/highs-${HIGHS_VER}-linux-x64.tar.gz" -O highs.tar.gz \
+            || wget -q "https://github.com/ERGO-Code/HiGHS/releases/download/v${HIGHS_VER}/HiGHS-${HIGHS_VER}-linux-x64.tar.gz" -O highs.tar.gz
+          tar -xzf highs.tar.gz
+          BIN=$(find /tmp -name highs -type f -executable | head -1)
+          echo "Found HiGHS binary at: $BIN"
+          sudo cp "$BIN" /usr/local/bin/highs
+          sudo chmod +x /usr/local/bin/highs
+          highs --version
 
       - name: Install Python dependencies
         run: |

@@ -1,23 +1,30 @@
 #!/usr/bin/env python3
-"""Quick sanity test for both HiGHS and CBC solvers + LLL."""
+"""Quick sanity test for HiGHS (CLI + Python API) and CBC solvers + LLL."""
 
 import numpy as np
 import time
 import shutil
+import os
 from pulp import (
     LpProblem, LpVariable, LpInteger, lpSum, LpMinimize,
     PULP_CBC_CMD, HiGHS_CMD, value,
 )
 from fpylll import IntegerMatrix, LLL
 
+# --- Try to import native HiGHS Python API (pulp >= 3.0) ---
+try:
+    from pulp import HiGHS as HiGHS_PY
+    HAS_HIGHS_PY = True
+except ImportError:
+    HAS_HIGHS_PY = False
+
 
 def find_highs():
-    """Locate the HiGHS executable."""
+    """Locate the HiGHS CLI executable."""
     path = shutil.which('highs')
     if path is None:
-        # Check common installation paths
-        for candidate in ['/usr/bin/highs', '/usr/local/bin/highs', '/opt/highs/bin/highs']:
-            if shutil.which(candidate):
+        for candidate in ['/usr/local/bin/highs', '/usr/bin/highs', '/opt/highs/bin/highs']:
+            if os.path.exists(candidate) and os.access(candidate, os.X_OK):
                 return candidate
     return path
 
@@ -40,9 +47,11 @@ def build_and_solve(A, b, q, solver_name, time_limit=30, highs_path=None):
     if solver_name == 'highs':
         if highs_path:
             prob.solve(HiGHS_CMD(path=highs_path, msg=False, timeLimit=time_limit))
+        elif HAS_HIGHS_PY:
+            print("    [INFO] Using native HiGHS Python API")
+            prob.solve(HiGHS_PY(msg=False, timeLimit=time_limit))
         else:
-            # Fallback to CBC if HiGHS binary is missing
-            print("    [WARN] HiGHS binary not found, falling back to CBC")
+            print("    [WARN] HiGHS unavailable; falling back to CBC")
             prob.solve(PULP_CBC_CMD(msg=False, timeLimit=time_limit, threads=2))
     else:
         prob.solve(PULP_CBC_CMD(msg=False, timeLimit=time_limit, threads=2))
@@ -58,12 +67,12 @@ print("=" * 60)
 print("Quick Sanity Test — HiGHS + CBC + LLL")
 print("=" * 60)
 
-# Detect HiGHS
 highs_path = find_highs()
-if highs_path:
-    print(f"HiGHS executable found at: {highs_path}")
-else:
-    print("HiGHS executable NOT found — will fall back to CBC")
+print(f"HiGHS CLI path: {highs_path if highs_path else 'NOT FOUND'}")
+print(f"HiGHS Python API available: {HAS_HIGHS_PY}")
+
+if not highs_path and not HAS_HIGHS_PY:
+    print("[WARN] HiGHS not available in any form; CBC will be used.")
 
 n, q, m = 5, 97, 10
 np.random.seed(42)
@@ -77,11 +86,13 @@ print(f"True secret: {s_true}")
 
 print("\n[1] MILP — HiGHS solver")
 s_h, t_h, st_h = build_and_solve(A, b, q, 'highs', highs_path=highs_path)
-print(f"    Status: {st_h}, Time: {t_h:.3f}s, Match: {np.array_equal(s_h, s_true) if s_h is not None else False}")
+ok_h = s_h is not None and np.array_equal(s_h, s_true)
+print(f"    Status: {st_h}, Time: {t_h:.3f}s, Match: {ok_h}")
 
 print("\n[2] MILP — CBC solver")
 s_c, t_c, st_c = build_and_solve(A, b, q, 'cbc')
-print(f"    Status: {st_c}, Time: {t_c:.3f}s, Match: {np.array_equal(s_c, s_true) if s_c is not None else False}")
+ok_c = s_c is not None and np.array_equal(s_c, s_true)
+print(f"    Status: {st_c}, Time: {t_c:.3f}s, Match: {ok_c}")
 
 print("\n[3] LLL attack")
 d = m + n + 1
@@ -100,5 +111,8 @@ LLL.reduction(B)
 print(f"    LLL reduced {d}-dim basis in {time.time() - start:.4f}s")
 
 print("\n" + "=" * 60)
-print("All solvers OK — ready for full benchmark!")
+if ok_h and ok_c:
+    print("Both MILP solvers OK — ready for full benchmark!")
+else:
+    print("[WARN] Some solver failed — check logs above.")
 print("=" * 60)
