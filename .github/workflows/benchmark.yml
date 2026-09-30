@@ -7,7 +7,7 @@ on:
     inputs:
       dimensions:
         description: 'Dimensions (space-separated)'
-        default: '5 10 15 20 25 30 35 40 45 50 55'
+        default: '5 10 15 20 25 30 35 40 45 50'
       instances:
         description: 'Instances per config'
         default: '10'
@@ -94,7 +94,7 @@ jobs:
         run: |
           mkdir -p results
           python lwe_benchmark.py \
-            --dimensions ${{ github.event.inputs.dimensions || '5 10 15' }} \
+            --dimensions ${{ github.event.inputs.dimensions || '5 10 15 20 25 30 35 40 45 50' }} \
             --instances ${{ github.event.inputs.instances || '10' }} \
             --time-limit ${{ github.event.inputs.time_limit || '60' }} \
             --bkz-beta ${{ github.event.inputs.bkz_beta || '15' }} \
