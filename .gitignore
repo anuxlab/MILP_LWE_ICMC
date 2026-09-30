@@ -1,0 +1,24 @@
+# Virtual environments
+lwe-bench-env/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Results (uploaded as artifacts instead)
+results/
+*.json
+*.pdf
+
+# OS
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
