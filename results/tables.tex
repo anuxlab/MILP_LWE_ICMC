@@ -14,6 +14,11 @@ $n$ & MILP-HiGHS & MILP-CBC & LLL & BKZ-15 & Winner \\
 5 & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & Tie \\
 10 & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & Tie \\
 15 & 10.0 & 0.0 & \textbf{100.0} & \textbf{100.0} & Tie \\
+20 & 0.0 & 0.0 & \textbf{100.0} & \textbf{100.0} & Tie \\
+25 & 0.0 & 0.0 & \textbf{100.0} & \textbf{100.0} & Tie \\
+30 & 0.0 & 0.0 & \textbf{100.0} & \textbf{100.0} & Tie \\
+40 & 0.0 & 0.0 & 60.0 & \textbf{100.0} & BKZ \\
+50 & 0.0 & 0.0 & 0.0 & \textbf{10.0} & BKZ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -28,15 +33,15 @@ $n$ & MILP-HiGHS & MILP-CBC & LLL & BKZ-15 & Winner \\
 \toprule
 Solver & Success (\%) & Mean Time (s) & Median Time (s) & Wins \\
 \midrule
-HiGHS & 56.7 & 12.599 & 10.004 & 17/90 \\
-CBC   & 55.6 & 10.898 & 3.941 & 34/90 \\
+HiGHS & 28.7 & 31.377 & 10.402 & 20/240 \\
+CBC   & 32.1 & 27.375 & 10.136 & 56/240 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-% === TABLE 3: Success Rate by Secret Type (n=15) ===
+% === TABLE 3: Success Rate by Secret Type (n=50) ===
 \begin{table}[t]
-\caption{Success rate (\%) by secret distribution at $n=15$ ($q=97$, $m=30$).}
+\caption{Success rate (\%) by secret distribution at $n=50$ ($q=97$, $m=100$).}
 \label{tab:success-secret}
 \centering
 \small
@@ -44,8 +49,8 @@ CBC   & 55.6 & 10.898 & 3.941 & 34/90 \\
 \toprule
 Secret Type & MILP-HiGHS & MILP-CBC & LLL & BKZ-15 \\
 \midrule
-Sparse & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} \\
-Ternary & 10.0 & 0.0 & \textbf{100.0} & \textbf{100.0} \\
+Sparse & 0.0 & 0.0 & 10.0 & \textbf{100.0} \\
+Ternary & 0.0 & 0.0 & 0.0 & \textbf{10.0} \\
 Uniform & \textbf{0.0} & \textbf{0.0} & \textbf{0.0} & \textbf{0.0} \\
 \bottomrule
 \end{tabular}
@@ -64,15 +69,20 @@ $n$ & MILP-HiGHS & MILP-CBC & LLL & BKZ-15 \\
 5 & 3.384 & 3.450 & 0.001 & 0.001 \\
 10 & 5.643 & 4.365 & 0.003 & 0.006 \\
 15 & 28.769 & 24.880 & 0.010 & 0.020 \\
+20 & 39.497 & 26.630 & 0.025 & 0.047 \\
+25 & 43.371 & 29.645 & 0.039 & 0.073 \\
+30 & 43.403 & 42.957 & 0.082 & 0.157 \\
+40 & 43.409 & 43.536 & 0.171 & 0.336 \\
+50 & 43.536 & 43.539 & 0.279 & 0.606 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 % === KEY STATISTICS FOR PAPER ===
-% HiGHS mean time over all runs: 12.5988 s
-% CBC mean time over all runs:   10.8981 s
+% HiGHS mean time over all runs: 31.3766 s
+% CBC mean time over all runs:   27.3753 s
 % Speedup CBC/HiGHS:             0.87x
-% HiGHS total success rate:      56.67%
-% CBC total success rate:        55.56%
-% HiGHS wins:                    17/90
-% CBC wins:                      34/90
+% HiGHS total success rate:      28.75%
+% CBC total success rate:        32.08%
+% HiGHS wins:                    20/240
+% CBC wins:                      56/240

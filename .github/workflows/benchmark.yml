@@ -3,6 +3,14 @@ name: LWE Benchmark
 on:
   push:
     branches: [main]
+    paths:
+      - 'lwe_benchmark.py'
+      - 'generate_figures.py'
+      - 'plot_benchmark_diagnostics.py'
+      - 'instrument_root_diagnostics.py'
+      - 'generate_latex_tables.py'
+      - 'requirements.txt'
+      - '.github/workflows/benchmark.yml'
   workflow_dispatch:
     inputs:
       instances:
@@ -18,10 +26,18 @@ on:
         description: 'Force rerun (ignore checkpoints)'
         type: boolean
         default: false
+      capture_logs:
+        description: 'Capture full solver logs (increases artifact size)'
+        type: boolean
+        default: false
+      run_root_diagnostics:
+        description: 'Run Extension 1 root diagnostics'
+        type: boolean
+        default: true
 
 jobs:
   # ============================================================
-  # JOB 1: QUICK ENVIRONMENT SANITY CHECK
+  # JOB 1: ENVIRONMENT SANITY CHECK
   # ============================================================
   quick-test:
     name: Environment sanity check
@@ -50,7 +66,7 @@ jobs:
         run: python quick_test.py
 
   # ============================================================
-  # JOB 2: PARALLEL BENCHMARK (one job per dimension)
+  # JOB 2: PARALLEL DIMENSION BENCHMARK
   # ============================================================
   benchmark:
     name: Benchmark n=${{ matrix.dimension }}
@@ -73,7 +89,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -82,10 +98,18 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: results/checkpoints
-          key: lwe-checkpoints-schema6-common-${{ github.run_id }}
+          key: lwe-checkpoints-schema7-common-${{ github.run_id }}
           restore-keys: |
+            lwe-checkpoints-schema7-common-
             lwe-checkpoints-schema6-common-
-            lwe-checkpoints-schema5-main-
+
+      - name: Restore instance artifacts cache
+        uses: actions/cache/restore@v4
+        with:
+          path: results/instances
+          key: lwe-instances-schema1-${{ github.run_id }}
+          restore-keys: |
+            lwe-instances-schema1-
 
       - name: Run benchmark for n=${{ matrix.dimension }}
         run: |
@@ -96,14 +120,22 @@ jobs:
             --time-limit ${{ github.event.inputs.time_limit || '60' }} \
             --bkz-beta ${{ github.event.inputs.bkz_beta || '15' }} \
             ${{ github.event.inputs.force_rerun == 'true' && '--force-rerun' || '' }} \
+            ${{ github.event.inputs.capture_logs == 'true' && '--capture-logs' || '' }} \
             2>&1 | tee results/run_dim${{ matrix.dimension }}.log
 
-      - name: Save per-dimension checkpoints
+      - name: Save checkpoint cache
         if: always()
         uses: actions/cache/save@v4
         with:
           path: results/checkpoints
-          key: lwe-checkpoints-schema6-dim${{ matrix.dimension }}-${{ github.run_id }}
+          key: lwe-checkpoints-schema7-dim${{ matrix.dimension }}-${{ github.run_id }}
+
+      - name: Save instance artifacts cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: results/instances
+          key: lwe-instances-schema1-n${{ matrix.dimension }}-${{ github.run_id }}
 
       - name: Upload per-dimension results
         if: always()
@@ -115,13 +147,14 @@ jobs:
           if-no-files-found: warn
 
   # ============================================================
-  # JOB 3: MERGE ALL DIMENSIONS AND GENERATE FIGURES
+  # JOB 3: MERGE, DIAGNOSTICS, FIGURES, TABLES
   # ============================================================
   merge:
-    name: Merge all dimensions and generate figures
+    name: Merge, diagnostics, and figures
     needs: [benchmark]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@v4
@@ -131,7 +164,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -162,8 +195,39 @@ jobs:
           print(f"Wrote {len(records)} records to {out}")
           PY
 
-      - name: Generate figures
+      - name: Record environment manifest
+        run: |
+          {
+            echo "# Environment Manifest"
+            echo ""
+            echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "Git commit: $(git rev-parse HEAD)"
+            echo "Runner: ${{ runner.os }} ${{ runner.arch }}"
+            echo "Image: ${{ runner.name }}"
+            echo ""
+            echo "## Python"
+            python --version
+            echo ""
+            echo "## Frozen dependencies"
+            echo '```'
+            pip freeze
+            echo '```'
+          } > results/ENVIRONMENT.md
+
+      - name: Instrument root diagnostics (Extension 1)
+        if: ${{ github.event.inputs.run_root_diagnostics != 'false' }}
+        continue-on-error: true
+        run: |
+          echo "Running Extension 1 instrumentation..."
+          python instrument_root_diagnostics.py || \
+            echo "[WARN] Extension 1 diagnostics failed; continuing"
+
+      - name: Generate main figures
         run: python generate_figures.py
+
+      - name: Generate MILP diagnostics figure
+        continue-on-error: true
+        run: python plot_benchmark_diagnostics.py
 
       - name: Generate LaTeX tables
         run: python generate_latex_tables.py
@@ -173,7 +237,14 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: results/checkpoints
-          key: lwe-checkpoints-schema6-common-${{ github.run_id }}
+          key: lwe-checkpoints-schema7-common-${{ github.run_id }}
+
+      - name: Save combined instance artifacts cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: results/instances
+          key: lwe-instances-schema1-${{ github.run_id }}
 
       - name: Upload merged results
         uses: actions/upload-artifact@v4

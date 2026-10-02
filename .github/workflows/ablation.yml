@@ -1,0 +1,273 @@
+name: Ablation Study (Extension 2)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'run_ablation_study.py'
+      - 'plot_ablation_study.py'
+      - 'lwe_benchmark.py'
+      - 'quick_test.py'
+      - 'requirements.txt'
+      - '.github/workflows/ablation.yml'
+  workflow_dispatch:
+    inputs:
+      dimensions:
+        description: 'Dimensions (space-separated)'
+        default: '15'
+      instances:
+        description: 'Instances per dimension'
+        default: '5'
+      time_limit:
+        description: 'Time limit per attack (seconds)'
+        default: '30'
+      secret_types:
+        description: 'Secret types'
+        default: 'sparse'
+
+jobs:
+  # ============================================================
+  # JOB 1: QUICK ENVIRONMENT SANITY CHECK
+  # ============================================================
+  quick-test:
+    name: Environment sanity check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify solvers
+        run: |
+          python -c "import highspy; print('highspy OK')"
+          python -c "from pulp import HiGHS; print('pulp.HiGHS OK')"
+          python -c "from pulp import PULP_CBC_CMD; print('pulp CBC OK')"
+          python -c "from fpylll import LLL, BKZ; print('fpylll OK')"
+
+      - name: Run quick sanity test
+        run: python quick_test.py
+
+  # ============================================================
+  # JOB 2: PREPARE BASE INSTANCES
+  # ------------------------------------------------------------
+  # The ablation study needs the base instance definitions
+  # (seeds, dimensions, secret types) to run the same instances
+  # under all six configurations. We regenerate them here rather
+  # than depending on a prior benchmark run's artifact.
+  # ============================================================
+  prepare:
+    name: Prepare base instances
+    needs: quick-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate base instances manifest
+        run: |
+          mkdir -p results
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          # Match the seed scheme used by lwe_benchmark.py
+          seed_base = 1000
+          dimensions = [int(x) for x in "${{ github.event.inputs.dimensions || '15' }}".split()]
+          instances = int("${{ github.event.inputs.instances || '5' }}")
+          secret_types = "${{ github.event.inputs.secret_types || 'sparse' }}".split()
+
+          records = []
+          for n in dimensions:
+              m = 2 * n
+              for sec in secret_types:
+                  for inst in range(instances):
+                      seed = seed_base + inst
+                      key = f'n{n}_q97_m{m}_{sec}_i{inst}'
+                      records.append({
+                          'n': n, 'q': 97, 'm': m,
+                          'secret_type': sec,
+                          'instance': inst, 'seed': seed,
+                          'key': key,
+                      })
+
+          out = Path('results/benchmark_results.json')
+          with open(out, 'w') as f:
+              json.dump(records, f, indent=2)
+          print(f"Wrote {len(records)} base instance definitions to {out}")
+          PY
+
+      - name: Upload base manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: ablation-base-manifest
+          path: results/benchmark_results.json
+          retention-days: 30
+
+  # ============================================================
+  # JOB 3: PARALLEL ABLATION CELLS
+  # ------------------------------------------------------------
+  # Six configurations run in parallel: 2 support modes × 3 error
+  # bounds. Each cell writes its own partial JSON, which the merge
+  # job later concatenates.
+  # ============================================================
+  ablation:
+    name: Ablation support=${{ matrix.support }} E=${{ matrix.E }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    continue-on-error: true
+
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - {support: weight_cap, E: 5}
+          - {support: weight_cap, E: 20}
+          - {support: weight_cap, E: 30}
+          - {support: no_cap,     E: 5}
+          - {support: no_cap,     E: 20}
+          - {support: no_cap,     E: 30}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download base manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: ablation-base-manifest
+          path: results/
+
+      - name: Restore shared ablation checkpoints
+        uses: actions/cache/restore@v4
+        with:
+          path: results/checkpoints
+          key: lwe-ablation-schema1-${{ matrix.support }}-E${{ matrix.E }}-${{ github.run_id }}
+          restore-keys: |
+            lwe-ablation-schema1-${{ matrix.support }}-E${{ matrix.E }}-
+            lwe-ablation-schema1-
+
+      - name: Run ablation cell
+        run: |
+          mkdir -p results
+          python run_ablation_study.py \
+            --dimensions ${{ github.event.inputs.dimensions || '15' }} \
+            --instances-per-dim ${{ github.event.inputs.instances || '5' }} \
+            --time-limit ${{ github.event.inputs.time_limit || '30' }} \
+            --support-mode ${{ matrix.support }} \
+            --error-bound ${{ matrix.E }} \
+            --out results/ablation_${{ matrix.support }}_E${{ matrix.E }}.json \
+            2>&1 | tee results/run_ablation_${{ matrix.support }}_E${{ matrix.E }}.log
+
+      - name: Save ablation checkpoints
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: results/checkpoints
+          key: lwe-ablation-schema1-${{ matrix.support }}-E${{ matrix.E }}-${{ github.run_id }}
+
+      - name: Upload ablation cell results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ablation-${{ matrix.support }}-E${{ matrix.E }}
+          path: |
+            results/ablation_${{ matrix.support }}_E${{ matrix.E }}.json
+            results/run_ablation_${{ matrix.support }}_E${{ matrix.E }}.log
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ============================================================
+  # JOB 4: MERGE, PLOT, UPLOAD
+  # ============================================================
+  merge:
+    name: Merge ablation and generate figure
+    needs: [ablation]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download all ablation cell artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ablation-*-E*
+          merge-multiple: true
+          path: results/
+
+      - name: Merge into single ablation_study.json
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          all_records = []
+          for p in sorted(Path('results').glob('ablation_*.json')):
+              try:
+                  with open(p) as f:
+                      data = json.load(f)
+                  all_records.extend(data)
+                  print(f"  {p.name}: {len(data)} records")
+              except Exception as e:
+                  print(f"  {p.name}: FAILED ({e})")
+
+          out = Path('results/ablation_study.json')
+          with open(out, 'w') as f:
+              json.dump(all_records, f, indent=2)
+          print(f"\nMerged {len(all_records)} records into {out}")
+          PY
+
+      - name: Generate ablation figure
+        continue-on-error: true
+        run: python plot_ablation_study.py
+
+      - name: Upload merged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ablation-merged
+          path: |
+            results/ablation_study.json
+            results/fig_ablation_study.pdf
+            results/fig_ablation_study.png
+            results/run_ablation_*.log
+          retention-days: 90
+          if-no-files-found: warn

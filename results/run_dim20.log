@@ -1,0 +1,84 @@
+======================================================================
+LWE Benchmark (Resumable) — 2026-09-30T11:31:03.563749
+HiGHS CLI path:    NOT FOUND
+HiGHS Python API:  available
+Dimensions:        [20]
+Secret types:      ['ternary', 'sparse', 'uniform']
+Instances/config:  10
+Base time limit:   60s
+BKZ β:             15
+Force rerun:       False
+Checkpoint dir:    results/checkpoints
+======================================================================
+
+>>> n=20, q=97, m=40, secret=ternary (time limit 60s)
+  [  1/30] n20_q97_m40_ternary_i0: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [  2/30] n20_q97_m40_ternary_i1: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [  3/30] n20_q97_m40_ternary_i2: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [  4/30] n20_q97_m40_ternary_i3: HiGHS=X( 60.02s) | CBC=X( 60.54s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=4 skipped=3 solved=4 failed=0
+  [  5/30] n20_q97_m40_ternary_i4: HiGHS=X( 60.02s) | CBC=X( 60.38s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=5 skipped=3 solved=5 failed=0
+  [  6/30] n20_q97_m40_ternary_i5: HiGHS=X( 60.02s) | CBC=X( 60.58s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=6 skipped=3 solved=6 failed=0
+  [  7/30] n20_q97_m40_ternary_i6: HiGHS=X( 60.02s) | CBC=X( 60.39s) | LLL=OK(  0.03s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=7 skipped=3 solved=7 failed=0
+  [  8/30] n20_q97_m40_ternary_i7: HiGHS=X( 60.02s) | CBC=X( 60.58s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=8 skipped=3 solved=8 failed=0
+  [  9/30] n20_q97_m40_ternary_i8: HiGHS=X( 60.02s) | CBC=X( 60.63s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=9 skipped=3 solved=9 failed=0
+  [ 10/30] n20_q97_m40_ternary_i9: HiGHS=X( 60.02s) | CBC=X( 60.38s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=10 skipped=3 solved=10 failed=0
+
+>>> n=20, q=97, m=40, secret=sparse (time limit 60s)
+  [ 11/30] n20_q97_m40_sparse_i0: HiGHS=OK( 56.08s) | CBC=OK( 10.74s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=11 skipped=3 solved=11 failed=0
+  [ 12/30] n20_q97_m40_sparse_i1: HiGHS=OK( 49.65s) | CBC=OK( 10.53s) | LLL=OK(  0.03s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=12 skipped=3 solved=12 failed=0
+  [ 13/30] n20_q97_m40_sparse_i2: HiGHS=OK( 60.03s) | CBC=OK( 11.55s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=13 skipped=3 solved=13 failed=0
+  [ 14/30] n20_q97_m40_sparse_i3: HiGHS=OK( 32.13s) | CBC=OK(  5.81s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [ 15/30] n20_q97_m40_sparse_i4: HiGHS=X( 60.02s) | CBC=OK(  8.90s) | LLL=OK(  0.03s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=15 skipped=3 solved=15 failed=0
+  [ 16/30] n20_q97_m40_sparse_i5: HiGHS=OK( 60.02s) | CBC=OK( 10.23s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=16 skipped=3 solved=16 failed=0
+  [ 17/30] n20_q97_m40_sparse_i6: HiGHS=OK( 27.52s) | CBC=OK(  8.95s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [ 18/30] n20_q97_m40_sparse_i7: HiGHS=OK( 47.55s) | CBC=OK(  9.21s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=18 skipped=3 solved=18 failed=0
+  [ 19/30] n20_q97_m40_sparse_i8: HiGHS=OK( 31.23s) | CBC=OK(  8.83s) | LLL=OK(  0.02s) | BKZ-15=OK(  0.05s)
+  [ 20/30] n20_q97_m40_sparse_i9: HiGHS=X( 60.02s) | CBC=OK(  7.93s) | LLL=OK(  0.03s) | BKZ-15=OK(  0.05s)
+  [HEARTBEAT] done=20 skipped=3 solved=20 failed=0
+
+>>> n=20, q=97, m=40, secret=uniform (time limit 10s)
+  [ 21/30] n20_q97_m40_uniform_i0: HiGHS=X( 10.02s) | CBC=X( 10.11s) | LLL=X(  0.03s) | BKZ-15=X(  0.05s)
+  [ 22/30] n20_q97_m40_uniform_i1: HiGHS=X( 10.20s) | CBC=X( 10.11s) | LLL=X(  0.02s) | BKZ-15=X(  0.05s)
+  [ 23/30] n20_q97_m40_uniform_i2: HiGHS=X( 10.01s) | CBC=X( 10.11s) | LLL=X(  0.03s) | BKZ-15=X(  0.05s)
+  [HEARTBEAT] done=23 skipped=3 solved=20 failed=3
+  [ 24/30] n20_q97_m40_uniform_i3: HiGHS=X( 10.02s) | CBC=X( 10.12s) | LLL=X(  0.02s) | BKZ-15=X(  0.05s)
+  [ 25/30] n20_q97_m40_uniform_i4: HiGHS=X( 10.02s) | CBC=X( 10.12s) | LLL=X(  0.02s) | BKZ-15=X(  0.05s)
+  [ 26/30] n20_q97_m40_uniform_i5: HiGHS=X( 10.02s) | CBC=X( 10.13s) | LLL=X(  0.02s) | BKZ-15=X(  0.05s)
+  [HEARTBEAT] done=26 skipped=3 solved=20 failed=6
+  [ 27/30] n20_q97_m40_uniform_i6: HiGHS=X( 10.02s) | CBC=X( 10.12s) | LLL=X(  0.02s) | BKZ-15=X(  0.05s)
+  [ 28/30] n20_q97_m40_uniform_i7: HiGHS=X( 10.01s) | CBC=X( 10.11s) | LLL=X(  0.02s) | BKZ-15=X(  0.05s)
+  [ 29/30] n20_q97_m40_uniform_i8: HiGHS=X( 10.02s) | CBC=X( 10.12s) | LLL=X(  0.02s) | BKZ-15=X(  0.05s)
+  [HEARTBEAT] done=29 skipped=3 solved=20 failed=9
+  [ 30/30] n20_q97_m40_uniform_i9: HiGHS=X( 10.15s) | CBC=X( 10.11s) | LLL=X(  0.03s) | BKZ-15=X(  0.05s)
+
+======================================================================
+Rebuilding aggregate results from checkpoints...
+Aggregate written: results/benchmark_results.json (120 records)
+======================================================================
+
+n     Secret     HiGHS     CBC       LLL       BKZ      
+-------------------------------------------------------
+20    ternary       0.0%     0.0%   100.0%   100.0%
+20    sparse       80.0%   100.0%   100.0%   100.0%
+20    uniform       0.0%     0.0%     0.0%     0.0%
+
+======================================================================
+HiGHS vs. CBC Summary
+======================================================================
+  HiGHS mean: 19.323s  |  CBC mean: 14.831s
+  Speedup (CBC/HiGHS): 0.77x
+
+  Total: 120 records  |  Skipped: 3  |  Solved: 20  |  Failed: 10

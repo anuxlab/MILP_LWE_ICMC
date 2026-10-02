@@ -1,0 +1,15 @@
+on:
+  workflow_dispatch:
+    inputs:
+      q_list:
+        description: 'Moduli (space-separated)'
+        default: '97 769 3329'
+      sigma_mode:
+        description: 'Noise policy: fixed_abs or fixed_rel'
+        default: 'fixed_abs'
+      dimensions:
+        description: 'Dimensions (space-separated)'
+        default: '15 25'
+      secret_types:
+        description: 'Secret types'
+        default: 'ternary sparse'

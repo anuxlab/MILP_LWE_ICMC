@@ -1,0 +1,146 @@
+name: Adaptive Dimension Expansion (Extension 5)
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_dimensions:
+        description: 'New n values (from expansion_plan.json)'
+        default: ''
+      new_moduli:
+        description: 'New q values'
+        default: ''
+      instances:
+        description: 'Instances per config'
+        default: '5'
+      time_limit:
+        description: 'Time limit (seconds)'
+        default: '60'
+
+jobs:
+  quick-test:
+    name: Environment sanity check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - run: python quick_test.py
+
+  expansion:
+    name: Cell n=${{ matrix.n }}, q=${{ matrix.q }}
+    needs: quick-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        # Values populated from expansion_plan.json by the workflow
+        # trigger. Edit manually after running plan_adaptive_expansion.py
+        # locally.
+        n: [11, 13, 17]     # example; replace with plan output
+        q: [97, 769, 3329]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore checkpoints
+        uses: actions/cache/restore@v4
+        with:
+          path: results/checkpoints
+          key: lwe-expand-schema1-n${{ matrix.n }}-q${{ matrix.q }}-${{ github.run_id }}
+          restore-keys: |
+            lwe-expand-schema1-n${{ matrix.n }}-q${{ matrix.q }}-
+            lwe-expand-schema1-
+            lwe-grid-schema1-
+
+      - name: Run expansion cell
+        run: |
+          mkdir -p results
+          python lwe_benchmark.py \
+            --dimensions ${{ matrix.n }} \
+            --q ${{ matrix.q }} \
+            --error-sigma-mode fixed_abs \
+            --secret-types ternary sparse \
+            --instances ${{ github.event.inputs.instances || '5' }} \
+            --time-limit ${{ github.event.inputs.time_limit || '60' }} \
+            2>&1 | tee results/run_n${{ matrix.n }}_q${{ matrix.q }}.log
+
+      - name: Save cell checkpoints
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: results/checkpoints
+          key: lwe-expand-schema1-n${{ matrix.n }}-q${{ matrix.q }}-${{ github.run_id }}
+
+      - name: Upload cell results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: expand-n${{ matrix.n }}-q${{ matrix.q }}-results
+          path: results/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    name: Merge and plot expansion
+    needs: [expansion]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download all cell artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: expand-n*-q*-results
+          merge-multiple: true
+          path: results/
+
+      - name: Merge into aggregate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d = Path('results/checkpoints')
+          records = []
+          for p in sorted(d.glob('*.json')):
+              try:
+                  with open(p) as f:
+                      records.append(json.load(f))
+              except Exception as e:
+                  print(f"skip {p}: {e}")
+          with open('results/expansion_results.json', 'w') as f:
+              json.dump(records, f, indent=2)
+          print(f"Wrote {len(records)} records")
+          PY
+
+      - name: Re-run adaptive planning
+        run: python plan_adaptive_expansion.py results/expansion_results.json
+
+      - name: Upload merged
+        uses: actions/upload-artifact@v4
+        with:
+          name: adaptive-expansion-merged
+          path: results/
+          retention-days: 90

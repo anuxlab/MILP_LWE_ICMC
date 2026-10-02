@@ -1,0 +1,22 @@
+{
+  "n": 30,
+  "q": 97,
+  "m": 60,
+  "secret_type": "ternary",
+  "instance": 9,
+  "key": "n30_q97_m60_ternary_i9",
+  "seed": 1009,
+  "highs_success": false,
+  "highs_time": 60.03609800338745,
+  "highs_status": "SUCCESS",
+  "cbc_success": false,
+  "cbc_time": 60.51545166969299,
+  "cbc_status": "SUCCESS",
+  "lll_success": true,
+  "lll_time": 0.08367109298706055,
+  "bkz_success": true,
+  "bkz_time": 0.15852785110473633,
+  "bkz_beta": 15,
+  "verified": true,
+  "timestamp": "2026-09-30T11:51:16.746407"
+}

@@ -1,0 +1,67 @@
+======================================================================
+LWE Benchmark (Resumable) — 2026-09-30T11:31:05.941189
+HiGHS CLI path:    NOT FOUND
+HiGHS Python API:  available
+Dimensions:        [15]
+Secret types:      ['ternary', 'sparse', 'uniform']
+Instances/config:  10
+Base time limit:   60s
+BKZ β:             15
+Force rerun:       False
+Checkpoint dir:    results/checkpoints
+======================================================================
+
+>>> n=15, q=97, m=30, secret=ternary (time limit 60s)
+  [  1/30] n15_q97_m30_ternary_i0: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [  2/30] n15_q97_m30_ternary_i1: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [  3/30] n15_q97_m30_ternary_i2: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [  4/30] n15_q97_m30_ternary_i3: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [  5/30] n15_q97_m30_ternary_i4: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [  6/30] n15_q97_m30_ternary_i5: RESUMED (HiGHS=OK, CBC=X, LLL=OK, BKZ=OK)
+  [  7/30] n15_q97_m30_ternary_i6: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [  8/30] n15_q97_m30_ternary_i7: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [  9/30] n15_q97_m30_ternary_i8: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+  [ 10/30] n15_q97_m30_ternary_i9: RESUMED (HiGHS=X, CBC=X, LLL=OK, BKZ=OK)
+
+>>> n=15, q=97, m=30, secret=sparse (time limit 60s)
+  [ 11/30] n15_q97_m30_sparse_i0: RESUMED (HiGHS=OK, CBC=OK, LLL=OK, BKZ=OK)
+  [ 12/30] n15_q97_m30_sparse_i1: RESUMED (HiGHS=OK, CBC=OK, LLL=OK, BKZ=OK)
+  [ 13/30] n15_q97_m30_sparse_i2: RESUMED (HiGHS=OK, CBC=OK, LLL=OK, BKZ=OK)
+  [ 14/30] n15_q97_m30_sparse_i3: RESUMED (HiGHS=OK, CBC=OK, LLL=OK, BKZ=OK)
+  [ 15/30] n15_q97_m30_sparse_i4: RESUMED (HiGHS=OK, CBC=OK, LLL=OK, BKZ=OK)
+  [ 16/30] n15_q97_m30_sparse_i5: RESUMED (HiGHS=OK, CBC=OK, LLL=OK, BKZ=OK)
+  [ 17/30] n15_q97_m30_sparse_i6: RESUMED (HiGHS=OK, CBC=OK, LLL=OK, BKZ=OK)
+  [ 18/30] n15_q97_m30_sparse_i7: RESUMED (HiGHS=OK, CBC=OK, LLL=OK, BKZ=OK)
+  [ 19/30] n15_q97_m30_sparse_i8: RESUMED (HiGHS=OK, CBC=OK, LLL=OK, BKZ=OK)
+  [ 20/30] n15_q97_m30_sparse_i9: RESUMED (HiGHS=OK, CBC=OK, LLL=OK, BKZ=OK)
+
+>>> n=15, q=97, m=30, secret=uniform (time limit 10s)
+  [ 21/30] n15_q97_m30_uniform_i0: RESUMED (HiGHS=X, CBC=X, LLL=X, BKZ=X)
+  [ 22/30] n15_q97_m30_uniform_i1: RESUMED (HiGHS=X, CBC=X, LLL=X, BKZ=X)
+  [ 23/30] n15_q97_m30_uniform_i2: RESUMED (HiGHS=X, CBC=X, LLL=X, BKZ=X)
+  [ 24/30] n15_q97_m30_uniform_i3: RESUMED (HiGHS=X, CBC=X, LLL=X, BKZ=X)
+  [ 25/30] n15_q97_m30_uniform_i4: RESUMED (HiGHS=X, CBC=X, LLL=X, BKZ=X)
+  [ 26/30] n15_q97_m30_uniform_i5: RESUMED (HiGHS=X, CBC=X, LLL=X, BKZ=X)
+  [ 27/30] n15_q97_m30_uniform_i6: RESUMED (HiGHS=X, CBC=X, LLL=X, BKZ=X)
+  [ 28/30] n15_q97_m30_uniform_i7: RESUMED (HiGHS=X, CBC=X, LLL=X, BKZ=X)
+  [ 29/30] n15_q97_m30_uniform_i8: RESUMED (HiGHS=X, CBC=X, LLL=X, BKZ=X)
+  [ 30/30] n15_q97_m30_uniform_i9: RESUMED (HiGHS=X, CBC=X, LLL=X, BKZ=X)
+
+======================================================================
+Rebuilding aggregate results from checkpoints...
+Aggregate written: results/benchmark_results.json (93 records)
+======================================================================
+
+n     Secret     HiGHS     CBC       LLL       BKZ      
+-------------------------------------------------------
+15    ternary      10.0%     0.0%   100.0%   100.0%
+15    sparse      100.0%   100.0%   100.0%   100.0%
+15    uniform       0.0%     0.0%     0.0%     0.0%
+
+======================================================================
+HiGHS vs. CBC Summary
+======================================================================
+  HiGHS mean: 14.128s  |  CBC mean: 12.499s
+  Speedup (CBC/HiGHS): 0.88x
+
+  Total: 93 records  |  Skipped: 30  |  Solved: 20  |  Failed: 0

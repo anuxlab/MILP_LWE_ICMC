@@ -1,0 +1,141 @@
+name: Crossed Modulus × Noise Grid (Extension 4)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dimensions:
+        description: 'Dimensions (space-separated)'
+        default: '15 25'
+      instances:
+        description: 'Instances per config'
+        default: '5'
+      time_limit:
+        description: 'Time limit (seconds)'
+        default: '60'
+
+jobs:
+  quick-test:
+    name: Environment sanity check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - run: python quick_test.py
+
+  grid:
+    name: Cell q=${{ matrix.q }}, σ=${{ matrix.sigma }}
+    needs: quick-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        q: [97, 769, 3329]
+        sigma: [0.5, 1.0, 2.0, 4.0]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore shared checkpoints
+        uses: actions/cache/restore@v4
+        with:
+          path: results/checkpoints
+          key: lwe-grid-schema1-q${{ matrix.q }}-sig${{ matrix.sigma }}-${{ github.run_id }}
+          restore-keys: |
+            lwe-grid-schema1-q${{ matrix.q }}-sig${{ matrix.sigma }}-
+            lwe-grid-schema1-
+
+      - name: Run crossed-grid cell
+        run: |
+          mkdir -p results
+          python lwe_benchmark.py \
+            --dimensions ${{ github.event.inputs.dimensions || '15 25' }} \
+            --q ${{ matrix.q }} \
+            --error-sigma ${{ matrix.sigma }} \
+            --secret-types ternary sparse \
+            --instances ${{ github.event.inputs.instances || '5' }} \
+            --time-limit ${{ github.event.inputs.time_limit || '60' }} \
+            --bkz-beta 15 \
+            2>&1 | tee results/run_q${{ matrix.q }}_sig${{ matrix.sigma }}.log
+
+      - name: Save cell checkpoints
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: results/checkpoints
+          key: lwe-grid-schema1-q${{ matrix.q }}-sig${{ matrix.sigma }}-${{ github.run_id }}
+
+      - name: Upload cell results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grid-q${{ matrix.q }}-sig${{ matrix.sigma }}-results
+          path: results/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    name: Merge grid and plot heatmaps
+    needs: [grid]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download all cell artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: grid-q*-sig*-results
+          merge-multiple: true
+          path: results/
+
+      - name: Rebuild aggregate JSON
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d = Path('results/checkpoints')
+          records = []
+          for p in sorted(d.glob('*.json')):
+              try:
+                  with open(p) as f:
+                      records.append(json.load(f))
+              except Exception as e:
+                  print(f"skip {p}: {e}")
+          out = Path('results/grid_results.json')
+          with open(out, 'w') as f:
+              json.dump(records, f, indent=2)
+          print(f"Wrote {len(records)} records to {out}")
+          PY
+
+      - name: Plot crossed-grid heatmaps
+        run: python plot_crossed_grid.py
+
+      - name: Upload merged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crossed-grid-merged
+          path: results/
+          retention-days: 90
