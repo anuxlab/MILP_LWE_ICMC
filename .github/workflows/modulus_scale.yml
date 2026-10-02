@@ -1,15 +1,169 @@
+name: Modulus Scaling (Week 2)
+
 on:
   workflow_dispatch:
     inputs:
-      q_list:
-        description: 'Moduli (space-separated)'
-        default: '97 769 3329'
-      sigma_mode:
-        description: 'Noise policy: fixed_abs or fixed_rel'
-        default: 'fixed_abs'
       dimensions:
         description: 'Dimensions (space-separated)'
         default: '15 25'
+      q_list:
+        description: 'Moduli (space-separated)'
+        default: '97 769 3329'
       secret_types:
-        description: 'Secret types'
+        description: 'Secret types (space-separated)'
         default: 'ternary sparse'
+      instances:
+        description: 'Instances per config'
+        default: '5'
+      time_limit:
+        description: 'Time limit per attack (seconds)'
+        default: '60'
+      bkz_beta:
+        description: 'BKZ block size'
+        default: '15'
+
+jobs:
+  quick-test:
+    name: Environment sanity check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify solvers
+        run: |
+          python -c "import highspy; print('highspy OK')"
+          python -c "from pulp import HiGHS; print('pulp.HiGHS OK')"
+          python -c "from pulp import PULP_CBC_CMD; print('pulp CBC OK')"
+          python -c "from fpylll import LLL, BKZ; print('fpylll OK')"
+
+      - name: Run quick sanity test
+        run: python quick_test.py
+
+  scale:
+    name: Modulus q=${{ matrix.q }}
+    needs: quick-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    continue-on-error: true
+
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        q: [97, 769, 3329]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore shared checkpoints
+        uses: actions/cache/restore@v4
+        with:
+          path: results/checkpoints
+          key: lwe-scale-schema1-q${{ matrix.q }}-${{ github.run_id }}
+          restore-keys: |
+            lwe-scale-schema1-q${{ matrix.q }}-
+            lwe-scale-schema1-
+
+      - name: Run modulus scan for q=${{ matrix.q }}
+        run: |
+          mkdir -p results
+          python lwe_benchmark.py \
+            --dimensions ${{ github.event.inputs.dimensions || '15 25' }} \
+            --q ${{ matrix.q }} \
+            --secret-types ${{ github.event.inputs.secret_types || 'ternary sparse' }} \
+            --instances ${{ github.event.inputs.instances || '5' }} \
+            --time-limit ${{ github.event.inputs.time_limit || '60' }} \
+            --bkz-beta ${{ github.event.inputs.bkz_beta || '15' }} \
+            2>&1 | tee results/run_q${{ matrix.q }}.log
+
+      - name: Save per-q checkpoints
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: results/checkpoints
+          key: lwe-scale-schema1-q${{ matrix.q }}-${{ github.run_id }}
+
+      - name: Upload per-q results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scale-q${{ matrix.q }}-results
+          path: results/
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    name: Merge moduli and plot
+    needs: [scale]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download all per-q results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: scale-q*-results
+          merge-multiple: true
+          path: results/
+
+      - name: Rebuild scale_results.json
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d = Path('results/checkpoints')
+          records = []
+          for p in sorted(d.glob('*.json')):
+              try:
+                  with open(p) as f:
+                      records.append(json.load(f))
+              except Exception as e:
+                  print(f"skip {p}: {e}")
+          out = Path('results/scale_results.json')
+          with open(out, 'w') as f:
+              json.dump(records, f, indent=2)
+          print(f"Wrote {len(records)} records to {out}")
+          PY
+
+      - name: Plot modulus scaling figure
+        continue-on-error: true
+        run: python plot_modulus_scaling.py
+
+      - name: Upload merged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: modulus-scaling-merged
+          path: results/
+          retention-days: 90
